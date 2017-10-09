@@ -5,6 +5,7 @@ Gin Prometheus metrics exporter inspired by [github.com/zsais/go-gin-prometheus]
 ![Go Version](https://img.shields.io/badge/go-1.9-brightgreen.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Depado/ginprom)](https://goreportcard.com/report/github.com/Depado/ginprom)
 [![Build Status](https://drone.depado.eu/api/badges/Depado/ginprom/status.svg)](https://drone.depado.eu/Depado/ginprom)
+[![codecov](https://codecov.io/gh/Depado/ginprom/branch/master/graph/badge.svg)](https://codecov.io/gh/Depado/ginprom)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Depado/bfchroma/blob/master/LICENSE)
 
 
