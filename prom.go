@@ -20,6 +20,7 @@ type Prometheus struct {
 	MetricsPath string
 	Subsystem   string
 	Engine      *gin.Engine
+	PathMap     map[string]string
 }
 
 // Path is an option allowing to set the metrics path when intializing with New.
@@ -65,7 +66,14 @@ func New(options ...func(*Prometheus)) *Prometheus {
 	if p.Engine != nil {
 		p.Engine.GET(p.MetricsPath, prometheusHandler())
 	}
+	p.PathMap = make(map[string]string)
 	return p
+}
+
+func (p *Prometheus) updatePathMap() {
+	for _, ri := range p.Engine.Routes() {
+		p.PathMap[ri.Handler] = ri.Path
+	}
 }
 
 func (p *Prometheus) register() {
@@ -109,10 +117,26 @@ func (p *Prometheus) register() {
 
 // Instrument is a gin middleware that can be used to generate metrics for a
 // single handler
-func (p *Prometheus) Instrument(path string) gin.HandlerFunc {
+func (p *Prometheus) Instrument() gin.HandlerFunc {
+	p.updatePathMap()
 	return func(c *gin.Context) {
+		var path string
 		start := time.Now()
 		reqSz := computeApproximateRequestSize(c.Request)
+
+		if c.Request.URL.String() == p.MetricsPath {
+			c.Next()
+			return
+		}
+
+		if in, ok := p.PathMap[c.HandlerName()]; ok {
+			path = in
+		} else {
+			p.updatePathMap()
+			if in, ok := p.PathMap[c.HandlerName()]; ok {
+				path = in
+			}
+		}
 
 		c.Next()
 

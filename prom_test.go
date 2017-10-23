@@ -90,10 +90,11 @@ func TestUse(t *testing.T) {
 func TestInstrument(t *testing.T) {
 	r := gin.New()
 	p := New(Engine(r))
+	r.Use(p.Instrument())
 	path := "/user/:id"
 	lpath := fmt.Sprintf(`path="%s"`, path)
 
-	r.GET(path, p.Instrument(path), func(c *gin.Context) {
+	r.GET(path, func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"id": c.Param("id")})
 	})
 
