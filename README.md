@@ -17,7 +17,6 @@ Simply run :
 ## Differences with go-gin-prometheus
 
 - No support for Prometheus' Push Gateway
-- Need to call middleware on each route
 - Options on constructor
 - Adds a `path` label to get the matched route
 
@@ -34,9 +33,10 @@ import (
 func main() {
 	r := gin.Default()
 	p := ginprom.New(ginprom.Subsystem("gin"), ginprom.Path("/metrics"), ginprom.Engine(r))
+	r.Use(p.Instrument())
 
-	r.GET("/hello/:id", p.Instrument("/hello/:id"), func(c *gin.Context) {})
-	r.GET("/world/:id", p.Instrument("/world/:id"), func(c *gin.Context) {})
+	r.GET("/hello/:id", func(c *gin.Context) {})
+	r.GET("/world/:id", func(c *gin.Context) {})
 	r.Run("127.0.0.1:8080")
 }
 ```

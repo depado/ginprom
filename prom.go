@@ -2,6 +2,7 @@ package ginprom
 
 import (
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,11 @@ import (
 var defaultPath = "/metrics"
 var defaultSys = "gin"
 
+type pmap struct {
+	sync.RWMutex
+	values map[string]string
+}
+
 // Prometheus contains the metrics gathered by the instance and its path
 type Prometheus struct {
 	reqCnt               *prometheus.CounterVec
@@ -20,7 +26,7 @@ type Prometheus struct {
 	MetricsPath string
 	Subsystem   string
 	Engine      *gin.Engine
-	PathMap     map[string]string
+	PathMap     pmap
 }
 
 // Path is an option allowing to set the metrics path when intializing with New.
@@ -66,14 +72,31 @@ func New(options ...func(*Prometheus)) *Prometheus {
 	if p.Engine != nil {
 		p.Engine.GET(p.MetricsPath, prometheusHandler())
 	}
-	p.PathMap = make(map[string]string)
+	p.PathMap.values = make(map[string]string)
 	return p
 }
 
 func (p *Prometheus) updatePathMap() {
+	p.PathMap.Lock()
+	defer p.PathMap.Unlock()
 	for _, ri := range p.Engine.Routes() {
-		p.PathMap[ri.Handler] = ri.Path
+		p.PathMap.values[ri.Handler] = ri.Path
 	}
+}
+
+func (p *Prometheus) getPathFromHandler(handler string) string {
+	p.PathMap.RLock()
+	defer p.PathMap.RUnlock()
+	if in, ok := p.PathMap.values[handler]; ok {
+		return in
+	}
+	p.PathMap.RUnlock()
+	p.updatePathMap()
+	p.PathMap.RLock()
+	if in, ok := p.PathMap.values[handler]; ok {
+		return in
+	}
+	return ""
 }
 
 func (p *Prometheus) register() {
@@ -129,14 +152,7 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 			return
 		}
 
-		if in, ok := p.PathMap[c.HandlerName()]; ok {
-			path = in
-		} else {
-			p.updatePathMap()
-			if in, ok := p.PathMap[c.HandlerName()]; ok {
-				path = in
-			}
-		}
+		path = p.getPathFromHandler(c.HandlerName())
 
 		c.Next()
 
