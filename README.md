@@ -19,6 +19,7 @@ Simply run :
 - No support for Prometheus' Push Gateway
 - Options on constructor
 - Adds a `path` label to get the matched route
+- Ability to ignore routes
 
 ## Usage
 
@@ -32,7 +33,10 @@ import (
 
 func main() {
 	r := gin.Default()
-	p := ginprom.New(ginprom.Subsystem("gin"), ginprom.Path("/metrics"), ginprom.Engine(r))
+	p := ginprom.New(
+		ginprom.Subsystem("gin"), 
+		ginprom.Path("/metrics"), 
+	)
 	r.Use(p.Instrument())
 
 	r.GET("/hello/:id", func(c *gin.Context) {})
@@ -52,6 +56,9 @@ Specify the subsystem
 Default : "gin"
 
 `Engine(e *gin.Engine)`  
-Specify the Gin engine directly when intializing. 
+Specify the Gin engine directly when initializing. 
 Saves a call to `Use(e *gin.Engine)`  
 Default : `nil`
+
+`Ignore(paths ...string)`   
+Specify which paths should not be taken into account by the middleware.
