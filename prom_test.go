@@ -115,3 +115,43 @@ func TestInstrument(t *testing.T) {
 	})
 	unregister(p)
 }
+
+func TestIgnore(t *testing.T) {
+	r := gin.New()
+	ipath := "/ping"
+	lipath := fmt.Sprintf(`path="%s"`, ipath)
+	p := New(Engine(r), Ignore(ipath))
+	r.Use(p.Instrument())
+
+	r.GET(ipath, func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	g := gofight.New()
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.NotContains(t, r.Body.String(), `requests_total`)
+	})
+
+	g.GET("/ping").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) { assert.Equal(t, http.StatusOK, r.Code) })
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.NotContains(t, r.Body.String(), `requests_total`)
+		assert.NotContains(t, r.Body.String(), lipath, "ignored path must not be present")
+	})
+	unregister(p)
+}
+
+func TestMetricsPathIgnored(t *testing.T) {
+	r := gin.New()
+	p := New(Engine(r))
+	r.Use(p.Instrument())
+
+	g := gofight.New()
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.NotContains(t, r.Body.String(), `requests_total`)
+	})
+	unregister(p)
+}

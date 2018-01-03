@@ -18,6 +18,11 @@ type pmap struct {
 	values map[string]string
 }
 
+type pmapb struct {
+	sync.RWMutex
+	values map[string]bool
+}
+
 // Prometheus contains the metrics gathered by the instance and its path
 type Prometheus struct {
 	reqCnt               *prometheus.CounterVec
@@ -25,6 +30,7 @@ type Prometheus struct {
 
 	MetricsPath string
 	Subsystem   string
+	Ignored     pmapb
 	Engine      *gin.Engine
 	PathMap     pmap
 }
@@ -34,6 +40,17 @@ type Prometheus struct {
 func Path(path string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.MetricsPath = path
+	}
+}
+
+// Ignore is used to disable instrumentation on some routes
+func Ignore(paths ...string) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.Ignored.Lock()
+		defer p.Ignored.Unlock()
+		for _, path := range paths {
+			p.Ignored.values[path] = true
+		}
 	}
 }
 
@@ -65,6 +82,7 @@ func New(options ...func(*Prometheus)) *Prometheus {
 		MetricsPath: defaultPath,
 		Subsystem:   defaultSys,
 	}
+	p.Ignored.values = make(map[string]bool)
 	for _, option := range options {
 		option(p)
 	}
@@ -72,31 +90,33 @@ func New(options ...func(*Prometheus)) *Prometheus {
 	if p.Engine != nil {
 		p.Engine.GET(p.MetricsPath, prometheusHandler())
 	}
-	p.PathMap.values = make(map[string]string)
+
 	return p
 }
 
-func (p *Prometheus) updatePathMap() {
+func (p *Prometheus) update() {
+	if p.PathMap.values == nil {
+		p.PathMap.values = make(map[string]string)
+	}
 	p.PathMap.Lock()
-	defer p.PathMap.Unlock()
+	p.Ignored.RLock()
+	defer func() {
+		p.PathMap.Unlock()
+		p.Ignored.RUnlock()
+	}()
 	for _, ri := range p.Engine.Routes() {
+		if _, ok := p.Ignored.values[ri.Path]; ok {
+			continue
+		}
 		p.PathMap.values[ri.Handler] = ri.Path
 	}
 }
 
-func (p *Prometheus) getPathFromHandler(handler string) string {
+func (p *Prometheus) get(handler string) (string, bool) {
 	p.PathMap.RLock()
 	defer p.PathMap.RUnlock()
-	if in, ok := p.PathMap.values[handler]; ok {
-		return in
-	}
-	p.PathMap.RUnlock()
-	p.updatePathMap()
-	p.PathMap.RLock()
-	if in, ok := p.PathMap.values[handler]; ok {
-		return in
-	}
-	return ""
+	in, ok := p.PathMap.values[handler]
+	return in, ok
 }
 
 func (p *Prometheus) register() {
@@ -141,18 +161,20 @@ func (p *Prometheus) register() {
 // Instrument is a gin middleware that can be used to generate metrics for a
 // single handler
 func (p *Prometheus) Instrument() gin.HandlerFunc {
-	p.updatePathMap()
 	return func(c *gin.Context) {
+		if p.PathMap.values == nil {
+			p.update()
+		}
 		var path string
-		start := time.Now()
-		reqSz := computeApproximateRequestSize(c.Request)
+		var found bool
 
-		if c.Request.URL.String() == p.MetricsPath {
+		start := time.Now()
+
+		if path, found = p.get(c.HandlerName()); !found {
 			c.Next()
 			return
 		}
-
-		path = p.getPathFromHandler(c.HandlerName())
+		reqSz := computeApproximateRequestSize(c.Request)
 
 		c.Next()
 
