@@ -104,11 +104,13 @@ func (p *Prometheus) update() {
 		p.PathMap.Unlock()
 		p.Ignored.RUnlock()
 	}()
-	for _, ri := range p.Engine.Routes() {
-		if _, ok := p.Ignored.values[ri.Path]; ok {
-			continue
+	if p.Engine != nil {
+		for _, ri := range p.Engine.Routes() {
+			if _, ok := p.Ignored.values[ri.Path]; ok {
+				continue
+			}
+			p.PathMap.values[ri.Handler] = ri.Path
 		}
-		p.PathMap.values[ri.Handler] = ri.Path
 	}
 }
 

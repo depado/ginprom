@@ -34,6 +34,7 @@ import (
 func main() {
 	r := gin.Default()
 	p := ginprom.New(
+		ginprom.Engine(r),
 		ginprom.Subsystem("gin"), 
 		ginprom.Path("/metrics"), 
 	)
@@ -62,3 +63,20 @@ Default : `nil`
 
 `Ignore(paths ...string)`   
 Specify which paths should not be taken into account by the middleware.
+
+## Troubleshooting
+
+### The instrumentation doesn't seem to work
+
+Make sure you have set the `gin.Engine` in the `ginprom` middleware, either when
+initializing it using `ginprom.New(ginprom.Engine(r))` or using the `Use` 
+function after the initialization like this :
+
+```go
+p := ginprom.New(
+	ginprom.Subsystem("gin"), 
+	ginprom.Path("/metrics"), 
+)
+p.Use(r)
+r.Use(p.Instrument())
+```

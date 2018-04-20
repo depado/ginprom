@@ -116,6 +116,20 @@ func TestInstrument(t *testing.T) {
 	unregister(p)
 }
 
+func TestEmptyRouter(t *testing.T) {
+	r := gin.New()
+	p := New()
+
+	r.Use(p.Instrument())
+	r.GET("/", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{}) })
+
+	g := gofight.New()
+	assert.NotPanics(t, func() {
+		g.GET("/").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {})
+	})
+	unregister(p)
+}
+
 func TestIgnore(t *testing.T) {
 	r := gin.New()
 	ipath := "/ping"
