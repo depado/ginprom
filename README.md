@@ -1,8 +1,8 @@
 # ginprom
 Gin Prometheus metrics exporter inspired by [github.com/zsais/go-gin-prometheus](https://github.com/zsais/go-gin-prometheus)
 
-![Go Version](https://img.shields.io/badge/go-1.8-brightgreen.svg)
 ![Go Version](https://img.shields.io/badge/go-1.9-brightgreen.svg)
+![Go Version](https://img.shields.io/badge/go-1.10-brightgreen.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Depado/ginprom)](https://goreportcard.com/report/github.com/Depado/ginprom)
 [![Build Status](https://drone.depado.eu/api/badges/Depado/ginprom/status.svg)](https://drone.depado.eu/Depado/ginprom)
 [![codecov](https://codecov.io/gh/Depado/ginprom/branch/master/graph/badge.svg)](https://codecov.io/gh/Depado/ginprom)
@@ -80,3 +80,6 @@ p := ginprom.New(
 p.Use(r)
 r.Use(p.Instrument())
 ```
+
+By design, if the middleware was to panic, it would do so when a route is
+called. That's why it just silently fails when no engine has been set.

@@ -5,14 +5,14 @@ workspace:
 pipeline:
   # Dep and vendoring
   prerequisites:
-    image: golang:1.9
+    image: golang:1.10
     commands:
       - go get -u github.com/golang/dep/cmd/dep
       - dep ensure
 
   # Test
   test:
-    image: golang:1.9
+    image: golang:1.10
     commands:
       - go test -race -coverprofile=coverage.txt -covermode=atomic
   
