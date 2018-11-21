@@ -19,6 +19,10 @@ func unregister(p *Prometheus) {
 	prometheus.Unregister(p.resSz)
 }
 
+func init() {
+	gin.SetMode(gin.TestMode)
+}
+
 func TestPrometheus_Use(t *testing.T) {
 	p := New()
 	r := gin.New()

@@ -1,21 +1,22 @@
-workspace:
-  base: /go
-  path: src/github.com/Depado/goploader/
+---
+kind: pipeline
+name: default
 
-pipeline:
-  # Dep and vendoring
-  prerequisites:
-    image: golang:1.10
-    commands:
-      - go get -u github.com/golang/dep/cmd/dep
-      - dep ensure
+steps:
+- name: fetch
+  image: docker:git
+  commands:
+  - git fetch --tags
 
-  # Test
-  test:
-    image: golang:1.10
-    commands:
-      - go test -race -coverprofile=coverage.txt -covermode=atomic
-  
-  codecov:
-    image: robertstettner/drone-codecov
-    secrets: [ codecov_token ]
+- name: test
+  image: golang:latest
+  commands:
+  - go test -race -coverprofile=coverage.txt -covermode=atomic
+  environment:
+    GO111MODULE: "on"
+
+- name: codecov
+  image: robertstettner/drone-codecov
+  settings:
+    codecov_token:
+      from_secret: codecov_token
