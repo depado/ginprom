@@ -15,8 +15,10 @@ steps:
   environment:
     GO111MODULE: "on"
 
-- name: codecov
-  image: robertstettner/drone-codecov
+- name: coverage
+  image: plugins/codecov
   settings:
-    codecov_token:
+    token:
       from_secret: codecov_token
+    files:
+     - coverage.txt
