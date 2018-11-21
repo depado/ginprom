@@ -3,6 +3,7 @@ package ginprom
 import (
 	"fmt"
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/appleboy/gofight"
@@ -113,6 +114,39 @@ func TestInstrument(t *testing.T) {
 		assert.Contains(t, r.Body.String(), lpath, "path must be present in the response")
 		assert.NotContains(t, r.Body.String(), `path="/user/10"`, "raw path must not be present")
 	})
+
+	unregister(p)
+}
+
+func TestThreadedInstrument(t *testing.T) {
+	r := gin.New()
+	p := New(Engine(r))
+	r.Use(p.Instrument())
+	path := "/user/:id"
+	lpath := fmt.Sprintf(`path="%s"`, path)
+
+	r.GET(path, func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"id": c.Param("id")})
+	})
+
+	var wg sync.WaitGroup
+	for n := 0; n < 10; n++ {
+		go func(wg *sync.WaitGroup) {
+			g := gofight.New()
+
+			g.GET("/user/10").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) { assert.Equal(t, http.StatusOK, r.Code) })
+
+			g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+				assert.Equal(t, http.StatusOK, r.Code)
+				assert.Contains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
+				assert.Contains(t, r.Body.String(), lpath, "path must be present in the response")
+				assert.NotContains(t, r.Body.String(), `path="/user/10"`, "raw path must not be present")
+			})
+			wg.Done()
+		}(&wg)
+		wg.Add(1)
+	}
+	wg.Wait()
 	unregister(p)
 }
 

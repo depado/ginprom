@@ -95,11 +95,11 @@ func New(options ...func(*Prometheus)) *Prometheus {
 }
 
 func (p *Prometheus) update() {
+	p.PathMap.Lock()
+	p.Ignored.RLock()
 	if p.PathMap.values == nil {
 		p.PathMap.values = make(map[string]string)
 	}
-	p.PathMap.Lock()
-	p.Ignored.RLock()
 	defer func() {
 		p.PathMap.Unlock()
 		p.Ignored.RUnlock()
@@ -164,7 +164,9 @@ func (p *Prometheus) register() {
 // single handler
 func (p *Prometheus) Instrument() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		p.PathMap.RLock()
 		if p.PathMap.values == nil {
+			p.PathMap.RUnlock()
 			p.update()
 		}
 		var path string
