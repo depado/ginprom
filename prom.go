@@ -11,7 +11,8 @@ import (
 )
 
 var defaultPath = "/metrics"
-var defaultSys = "gin"
+var defaultNs   = "gin"
+var defaultSys  = "gonic"
 
 type pmap struct {
 	sync.RWMutex
@@ -29,6 +30,7 @@ type Prometheus struct {
 	reqDur, reqSz, resSz prometheus.Summary
 
 	MetricsPath string
+	Namespace   string
 	Subsystem   string
 	Ignored     pmapb
 	Engine      *gin.Engine
@@ -63,6 +65,15 @@ func Subsystem(sub string) func(*Prometheus) {
 	}
 }
 
+// Namespace is an option allowing to set the namespace when intitializing
+// with New.
+// Example : ginprom.New(ginprom.Namespace("my_namespace"))
+func Namespace(ns string) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.Namespace = ns
+	}
+}
+
 // Engine is an option allowing to set the gin engine when intializing with New.
 // Example :
 // r := gin.Default()
@@ -80,6 +91,7 @@ func Engine(e *gin.Engine) func(*Prometheus) {
 func New(options ...func(*Prometheus)) *Prometheus {
 	p := &Prometheus{
 		MetricsPath: defaultPath,
+		Namespace:   defaultNs,
 		Subsystem:   defaultSys,
 	}
 	p.Ignored.values = make(map[string]bool)
@@ -124,6 +136,7 @@ func (p *Prometheus) get(handler string) (string, bool) {
 func (p *Prometheus) register() {
 	p.reqCnt = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
+			Namespace: p.Namespace,
 			Subsystem: p.Subsystem,
 			Name:      "requests_total",
 			Help:      "How many HTTP requests processed, partitioned by status code and HTTP method.",
@@ -134,6 +147,7 @@ func (p *Prometheus) register() {
 
 	p.reqDur = prometheus.NewSummary(
 		prometheus.SummaryOpts{
+			Namespace: p.Namespace,
 			Subsystem: p.Subsystem,
 			Name:      "request_duration_seconds",
 			Help:      "The HTTP request latencies in seconds.",
@@ -143,6 +157,7 @@ func (p *Prometheus) register() {
 
 	p.reqSz = prometheus.NewSummary(
 		prometheus.SummaryOpts{
+			Namespace: p.Namespace,
 			Subsystem: p.Subsystem,
 			Name:      "request_size_bytes",
 			Help:      "The HTTP request sizes in bytes.",
@@ -152,6 +167,7 @@ func (p *Prometheus) register() {
 
 	p.resSz = prometheus.NewSummary(
 		prometheus.SummaryOpts{
+			Namespace: p.Namespace,
 			Subsystem: p.Subsystem,
 			Name:      "response_size_bytes",
 			Help:      "The HTTP response sizes in bytes.",

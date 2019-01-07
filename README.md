@@ -52,9 +52,13 @@ func main() {
 Specify the path on which the metrics are accessed  
 Default : "/metrics"
 
+`Namespace(ns string)`  
+Specify the namespace  
+Default : "gin"
+
 `Subsystem(sub string)`  
 Specify the subsystem  
-Default : "gin"
+Default : "go"
 
 `Engine(e *gin.Engine)`  
 Specify the Gin engine directly when initializing. 
@@ -74,7 +78,8 @@ function after the initialization like this :
 
 ```go
 p := ginprom.New(
-	ginprom.Subsystem("gin"), 
+	ginprom.Namespace("gin"), 
+	ginprom.Subsystem("gonic"), 
 	ginprom.Path("/metrics"), 
 )
 p.Use(r)
