@@ -59,6 +59,23 @@ func TestEngine(t *testing.T) {
 	unregister(p)
 }
 
+func TestNamespace(t *testing.T) {
+	p := New()
+	assert.Equal(t, p.Namespace, defaultNs, "namespace should be default")
+	unregister(p)
+
+	tests := []string{
+		"test",
+		"",
+		"_",
+	}
+	for _, test := range tests {
+		p = New(Namespace(test))
+		assert.Equal(t, p.Namespace, test, "should match")
+		unregister(p)
+	}
+}
+
 func TestSubsystem(t *testing.T) {
 	p := New()
 	assert.Equal(t, p.Subsystem, defaultSys, "subsystem should be default")
