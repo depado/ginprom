@@ -168,6 +168,8 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 		if p.PathMap.values == nil {
 			p.PathMap.RUnlock()
 			p.update()
+		} else {
+			p.PathMap.RUnlock()
 		}
 		var path string
 		var found bool
