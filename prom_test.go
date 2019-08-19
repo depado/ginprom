@@ -49,6 +49,15 @@ func TestPath(t *testing.T) {
 	}
 }
 
+func TestToken(t *testing.T) {
+	valid := []string{"token1", "token2", ""}
+	for _, tt := range valid {
+		p := New(Token(tt))
+		assert.Equal(t, tt, p.Token)
+		unregister(p)
+	}
+}
+
 func TestEngine(t *testing.T) {
 	r := gin.New()
 	p := New(Engine(r))
@@ -222,5 +231,28 @@ func TestMetricsPathIgnored(t *testing.T) {
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.NotContains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
 	})
+	unregister(p)
+}
+
+func TestMetricsBearerToken(t *testing.T) {
+	r := gin.New()
+	p := New(Engine(r), Token("test-1234"))
+	r.Use(p.Instrument())
+
+	g := gofight.New()
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusUnauthorized, r.Code)
+		assert.Equal(t, errInvalidToken.Error(), r.Body.String())
+	})
+
+	g.GET(p.MetricsPath).
+		SetHeader(gofight.H{
+			"Authorization": "Bearer " + "test-1234",
+		}).
+		Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, http.StatusOK, r.Code)
+			assert.NotContains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
+		})
 	unregister(p)
 }

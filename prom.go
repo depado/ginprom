@@ -1,6 +1,9 @@
 package ginprom
 
 import (
+	"errors"
+	"fmt"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -11,8 +14,9 @@ import (
 )
 
 var defaultPath = "/metrics"
-var defaultNs   = "gin"
-var defaultSys  = "gonic"
+var defaultNs = "gin"
+var defaultSys = "gonic"
+var errInvalidToken = errors.New("Invalid or missing token")
 
 type pmap struct {
 	sync.RWMutex
@@ -32,6 +36,7 @@ type Prometheus struct {
 	MetricsPath string
 	Namespace   string
 	Subsystem   string
+	Token       string
 	Ignored     pmapb
 	Engine      *gin.Engine
 	PathMap     pmap
@@ -74,6 +79,15 @@ func Namespace(ns string) func(*Prometheus) {
 	}
 }
 
+// Token is an option allowing to set the bearer token in prometheus
+// with New.
+// Example : ginprom.New(ginprom.Token("your_custom_token"))
+func Token(token string) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.Token = token
+	}
+}
+
 // Engine is an option allowing to set the gin engine when intializing with New.
 // Example :
 // r := gin.Default()
@@ -100,7 +114,7 @@ func New(options ...func(*Prometheus)) *Prometheus {
 	}
 	p.register()
 	if p.Engine != nil {
-		p.Engine.GET(p.MetricsPath, prometheusHandler())
+		p.Engine.GET(p.MetricsPath, prometheusHandler(p.Token))
 	}
 
 	return p
@@ -214,13 +228,32 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 // Use is a method that should be used if the engine is set after middleware
 // initialization
 func (p *Prometheus) Use(e *gin.Engine) {
-	e.GET(p.MetricsPath, prometheusHandler())
+	e.GET(p.MetricsPath, prometheusHandler(p.Token))
 	p.Engine = e
 }
 
-func prometheusHandler() gin.HandlerFunc {
+func prometheusHandler(token string) gin.HandlerFunc {
 	h := promhttp.Handler()
 	return func(c *gin.Context) {
+		if token == "" {
+			h.ServeHTTP(c.Writer, c.Request)
+			return
+		}
+
+		header := c.Request.Header.Get("Authorization")
+
+		if header == "" {
+			c.String(http.StatusUnauthorized, errInvalidToken.Error())
+			return
+		}
+
+		bearer := fmt.Sprintf("Bearer %s", token)
+
+		if header != bearer {
+			c.String(http.StatusUnauthorized, errInvalidToken.Error())
+			return
+		}
+
 		h.ServeHTTP(c.Writer, c.Request)
 	}
 }
