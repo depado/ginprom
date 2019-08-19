@@ -1,6 +1,6 @@
 github.com/Knetic/govaluate v3.0.0+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
-github.com/appleboy/gofight/v2 v2.0.0+incompatible h1:mfTmEhmo9BZnzAtFpRL8MEkAxuWEzfJ3Gpgn6Zuzgw4=
-github.com/appleboy/gofight/v2 v2.0.0+incompatible/go.mod h1:6E7pthKhmwss84j/zEixBNim8Q6ahhHcYOtmW5ts5vA=
+github.com/appleboy/gofight/v2 v2.1.1 h1:mBiMmXAofKf1GdEHxp8QkfrRaj/nBCoDnkwjn8axsq8=
+github.com/appleboy/gofight/v2 v2.1.1/go.mod h1:6E7pthKhmwss84j/zEixBNim8Q6ahhHcYOtmW5ts5vA=
 github.com/astaxie/beego v1.11.1/go.mod h1:i69hVzgauOPSw5qeyF4GVZhn7Od0yG5bbCGzmhbWxgQ=
 github.com/beego/goyaml2 v0.0.0-20130207012346-5545475820dd/go.mod h1:1b+Y/CofkYwXMUU0OhQqGvsY2Bvgr4j6jfT699wyZKQ=
 github.com/beego/x2j v0.0.0-20131220205130-a0352aadc542/go.mod h1:kSeGC/p1AbBiEp5kat81+DSQrZenVBZXklMLaELspWU=

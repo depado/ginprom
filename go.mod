@@ -1,7 +1,7 @@
 module github.com/Depado/ginprom
 
 require (
-	github.com/appleboy/gofight/v2 v2.0.0+incompatible
+	github.com/appleboy/gofight/v2 v2.1.1
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gin-gonic/gin v1.4.0
