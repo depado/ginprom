@@ -36,6 +36,13 @@ func TestPrometheus_Use(t *testing.T) {
 	unregister(p)
 }
 
+// Set the path (endpoint) where the metrics will be served
+func ExamplePath() {
+	r := gin.New()
+	p := New(Engine(r), Path("/metrics"))
+	r.Use(p.Instrument())
+}
+
 func TestPath(t *testing.T) {
 	p := New()
 	assert.Equal(t, p.MetricsPath, defaultPath, "no usage of path should yield default path")
@@ -47,6 +54,13 @@ func TestPath(t *testing.T) {
 		assert.Equal(t, p.MetricsPath, tt)
 		unregister(p)
 	}
+}
+
+// Set a secret token that is required to access the endpoint
+func ExampleToken() {
+	r := gin.New()
+	p := New(Engine(r), Token("supersecrettoken"))
+	r.Use(p.Instrument())
 }
 
 func TestToken(t *testing.T) {

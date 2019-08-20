@@ -2,16 +2,16 @@
 
 Gin Prometheus metrics exporter inspired by [github.com/zsais/go-gin-prometheus](https://github.com/zsais/go-gin-prometheus)
 
-![Go Version](https://img.shields.io/badge/go-1.9-brightgreen.svg)
-![Go Version](https://img.shields.io/badge/go-1.10-brightgreen.svg)
+![Go Version](https://img.shields.io/badge/go-latest-brightgreen)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Depado/ginprom)](https://goreportcard.com/report/github.com/Depado/ginprom)
 [![Build Status](https://drone.depado.eu/api/badges/Depado/ginprom/status.svg)](https://drone.depado.eu/Depado/ginprom)
 [![codecov](https://codecov.io/gh/Depado/ginprom/branch/master/graph/badge.svg)](https://codecov.io/gh/Depado/ginprom)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Depado/bfchroma/blob/master/LICENSE)
+[![godoc](https://godoc.org/github.com/Depado/ginprom?status.svg)](https://godoc.org/github.com/Depado/ginprom)
 
 ## Install
 
-Simply run :
+Simply run:
 `go get -u github.com/Depado/ginprom`
 
 ## Differences with go-gin-prometheus

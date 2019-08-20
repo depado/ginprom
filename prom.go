@@ -1,3 +1,6 @@
+// Package ginprom is a library to instrument a gin server and expose a 
+// /metrics endpoint for Prometheus to scrape, keeping a low cardinality by
+// preserving the path parameters name in the prometheus label
 package ginprom
 
 import (
@@ -42,8 +45,7 @@ type Prometheus struct {
 	PathMap     pmap
 }
 
-// Path is an option allowing to set the metrics path when intializing with New.
-// Example : ginprom.New(ginprom.Path("/mymetrics"))
+// Path is an option allowing to set the metrics path when intializing with New
 func Path(path string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.MetricsPath = path
@@ -62,8 +64,7 @@ func Ignore(paths ...string) func(*Prometheus) {
 }
 
 // Subsystem is an option allowing to set the subsystem when intitializing
-// with New.
-// Example : ginprom.New(ginprom.Subsystem("my_system"))
+// with New
 func Subsystem(sub string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.Subsystem = sub
@@ -71,8 +72,7 @@ func Subsystem(sub string) func(*Prometheus) {
 }
 
 // Namespace is an option allowing to set the namespace when intitializing
-// with New.
-// Example : ginprom.New(ginprom.Namespace("my_namespace"))
+// with New
 func Namespace(ns string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.Namespace = ns
