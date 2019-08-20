@@ -2,6 +2,7 @@
 
 Gin Prometheus metrics exporter inspired by [github.com/zsais/go-gin-prometheus](https://github.com/zsais/go-gin-prometheus)
 
+[![Sourcegraph](https://sourcegraph.com/github.com/Depado/ginprom/-/badge.svg)](https://sourcegraph.com/github.com/Depado/ginprom?badge)
 ![Go Version](https://img.shields.io/badge/go-latest-brightgreen)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Depado/ginprom)](https://goreportcard.com/report/github.com/Depado/ginprom)
 [![Build Status](https://drone.depado.eu/api/badges/Depado/ginprom/status.svg)](https://drone.depado.eu/Depado/ginprom)
@@ -55,7 +56,7 @@ Override the default path (`/metrics`) on which the metrics can be accessed:
 ```go
 r := gin.New()
 p := ginprom.New(
-	ginprom.Engine(r), 
+	ginprom.Engine(r),
 	ginprom.Path("/custom/metrics"),
 )
 r.Use(p.Instrument())
@@ -68,7 +69,7 @@ Override the default namespace (`gin`):
 ```go
 r := gin.New()
 p := ginprom.New(
-	ginprom.Engine(r), 
+	ginprom.Engine(r),
 	ginprom.Namespace("custom_ns"),
 )
 r.Use(p.Instrument())
@@ -81,7 +82,7 @@ Override the default (`gonic`) subsystem:
 ```go
 r := gin.New()
 p := ginprom.New(
-	ginprom.Engine(r), 
+	ginprom.Engine(r),
 	ginprom.Subsystem("your_subsystem"),
 )
 r.Use(p.Instrument())
@@ -94,7 +95,7 @@ The preferred way to pass the router to ginprom:
 ```go
 r := gin.New()
 p := ginprom.New(
-	ginprom.Engine(r), 
+	ginprom.Engine(r),
 )
 r.Use(p.Instrument())
 ```
@@ -119,7 +120,7 @@ have routes not instrumented.
 ```go
 r := gin.New()
 p := ginprom.New(
-	ginprom.Engine(r), 
+	ginprom.Engine(r),
 	ginprom.Ignore("/api/no/no/no", "/api/super/secret/route")
 )
 r.Use(p.Instrument())
@@ -147,7 +148,7 @@ token is invalid, the endpoint will return an error.
 ```go
 r := gin.New()
 p := ginprom.New(
-	ginprom.Engine(r), 
+	ginprom.Engine(r),
 	ginprom.Token("supersecrettoken")
 )
 r.Use(p.Instrument())
