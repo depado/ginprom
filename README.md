@@ -48,28 +48,110 @@ func main() {
 
 ## Options
 
-`Path(path string)`  
-Specify the path on which the metrics are accessed  
-Default : "/metrics"
+### Path
 
-`Namespace(ns string)`  
-Specify the namespace  
-Default : "gin"
+Override the default path (`/metrics`) on which the metrics can be accessed:
 
-`Subsystem(sub string)`  
-Specify the subsystem  
-Default : "go"
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r), 
+	ginprom.Path("/custom/metrics"),
+)
+r.Use(p.Instrument())
+```
 
-`Engine(e *gin.Engine)`  
-Specify the Gin engine directly when initializing.
-Saves a call to `Use(e *gin.Engine)`
-Default : `nil`
+### Namespace
 
-`Ignore(paths ...string)`
-Specify which paths should not be taken into account by the middleware.
+Override the default namespace (`gin`):
 
-`Token(token string)`
-Specify the token from prometheus. It is returned when the api request token is invalid.
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r), 
+	ginprom.Namespace("custom_ns"),
+)
+r.Use(p.Instrument())
+```
+
+### Subsystem
+
+Override the default (`gonic`) subsystem:
+
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r), 
+	ginprom.Subsystem("your_subsystem"),
+)
+r.Use(p.Instrument())
+```
+
+### Engine
+
+The preferred way to pass the router to ginprom:
+
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r), 
+)
+r.Use(p.Instrument())
+```
+
+The alternative being to call the `Use` method after initialization:
+
+```go
+p := ginprom.New()
+// ...
+r := gin.New()
+p.Use(r)
+r.Use(p.Instrument())
+
+```
+
+### Ignore
+
+Ignore allows to completely ignore some routes. Even though you can apply the
+middleware to the only groups you're interested in, it is sometimes useful to
+have routes not instrumented.
+
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r), 
+	ginprom.Ignore("/api/no/no/no", "/api/super/secret/route")
+)
+r.Use(p.Instrument())
+```
+
+Note that most of the time this can be solved by gin groups:
+
+```go
+r := gin.New()
+p := ginprom.New(ginprom.Engine(r))
+
+// Add the routes that do not need instrumentation
+g := r.Group("/api/")
+g.Use(p.Instrument())
+{
+	// Instrumented routes
+}
+```
+
+### Token
+
+Specify a secret token which Prometheus will use to access the endpoint. If the
+token is invalid, the endpoint will return an error.
+
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r), 
+	ginprom.Token("supersecrettoken")
+)
+r.Use(p.Instrument())
+```
 
 ## Troubleshooting
 
