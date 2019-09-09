@@ -9,25 +9,21 @@ steps:
   - git fetch --tags
 
 - name: test
-  image: golang:latest
+  image: golang:1.13
   volumes:
   - name: deps
     path: /go
   commands:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
-  environment:
-    GO111MODULE: "on"
 
 - name: linter
-  image: golang:latest
+  image: golang:1.13
   volumes:
   - name: deps
     path: /go
   commands:
     - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.17.1
     - ./bin/golangci-lint run
-  environment:
-    GO111MODULE: "on"
 
 - name: coverage
   image: plugins/codecov
@@ -45,8 +41,8 @@ steps:
     token:
       from_secret: telegram_token
     message: >
-      *{{repo.name}}*  
-      [Build {{build.number}}]({{build.link}}) by {{commit.author}} {{#success build.status}}succeeded{{else}}failed{{/success}} in {{buildtime build.started}}  
+      *{{repo.name}}*
+      [Build {{build.number}}]({{build.link}}) by {{commit.author}} {{#success build.status}}succeeded{{else}}failed{{/success}} in {{buildtime build.started}}
       `{{truncate commit.sha 8}}`: "{{commit.message}}"
   when:
     status:
