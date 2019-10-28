@@ -146,7 +146,7 @@ func TestInstrument(t *testing.T) {
 	g := gofight.New()
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
-		assert.NotContains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
+		assert.NotContains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
 		assert.NotContains(t, r.Body.String(), lpath, "path must not be present in the response")
 	})
 
@@ -154,7 +154,7 @@ func TestInstrument(t *testing.T) {
 
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
-		assert.Contains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
+		assert.Contains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
 		assert.Contains(t, r.Body.String(), lpath, "path must be present in the response")
 		assert.NotContains(t, r.Body.String(), `path="/user/10"`, "raw path must not be present")
 	})
@@ -182,7 +182,7 @@ func TestThreadedInstrument(t *testing.T) {
 
 			g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 				assert.Equal(t, http.StatusOK, r.Code)
-				assert.Contains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
+				assert.Contains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
 				assert.Contains(t, r.Body.String(), lpath, "path must be present in the response")
 				assert.NotContains(t, r.Body.String(), `path="/user/10"`, "raw path must not be present")
 			})
@@ -222,14 +222,14 @@ func TestIgnore(t *testing.T) {
 	g := gofight.New()
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
-		assert.NotContains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
+		assert.NotContains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
 	})
 
 	g.GET("/ping").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) { assert.Equal(t, http.StatusOK, r.Code) })
 
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
-		assert.NotContains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
+		assert.NotContains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
 		assert.NotContains(t, r.Body.String(), lipath, "ignored path must not be present")
 	})
 	unregister(p)
@@ -243,7 +243,7 @@ func TestMetricsPathIgnored(t *testing.T) {
 	g := gofight.New()
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
-		assert.NotContains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
+		assert.NotContains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
 	})
 	unregister(p)
 }
@@ -275,7 +275,7 @@ func TestMetricsBearerToken(t *testing.T) {
 		}).
 		Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 			assert.Equal(t, http.StatusOK, r.Code)
-			assert.NotContains(t, r.Body.String(), fmt.Sprintf("%s_requests_total", p.Subsystem))
+			assert.NotContains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
 		})
 	unregister(p)
 }
