@@ -1,4 +1,4 @@
-// Package ginprom is a library to instrument a gin server and expose a 
+// Package ginprom is a library to instrument a gin server and expose a
 // /metrics endpoint for Prometheus to scrape, keeping a low cardinality by
 // preserving the path parameters name in the prometheus label
 package ginprom
@@ -36,6 +36,8 @@ type Prometheus struct {
 	reqCnt               *prometheus.CounterVec
 	reqDur, reqSz, resSz prometheus.Summary
 
+	customGauges map[string]prometheus.GaugeVec
+
 	MetricsPath string
 	Namespace   string
 	Subsystem   string
@@ -43,6 +45,49 @@ type Prometheus struct {
 	Ignored     pmapb
 	Engine      *gin.Engine
 	PathMap     pmap
+}
+
+// DecrementGaugeValue increments a custom gauge
+func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) error {
+	if g, ok := p.customGauges[name]; ok {
+		g.WithLabelValues(labelValues...).Inc()
+	} else {
+		errors.New("error finding custom gauge")
+	}
+	return nil
+}
+
+// SetGaugeValue set gauge to value
+func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value float64) error {
+	if g, ok := p.customGauges[name]; ok {
+		g.WithLabelValues(labelValues...).Set(value)
+	} else {
+		errors.New("error finding custom gauge")
+	}
+	return nil
+}
+
+// DecrementGaugeValue decrements a custom gauge
+func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) error {
+	if g, ok := p.customGauges[name]; ok {
+		g.WithLabelValues(labelValues...).Dec()
+	} else {
+		errors.New("error finding custom gauge")
+	}
+	return nil
+}
+
+// AddCustomGauge adds a custom gauge and registers it
+func (p *Prometheus) AddCustomGauge(name, help string, labels []string) {
+	g := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: p.Namespace,
+		Subsystem: p.Subsystem,
+		Name:      name,
+		Help:      help,
+	},
+		labels)
+	p.customGauges[name] = *g
+	prometheus.MustRegister(g)
 }
 
 // Path is an option allowing to set the metrics path when intializing with New
@@ -107,6 +152,8 @@ func New(options ...func(*Prometheus)) *Prometheus {
 		MetricsPath: defaultPath,
 		Namespace:   defaultNs,
 		Subsystem:   defaultSys,
+
+		customGauges: make(map[string]prometheus.GaugeVec),
 	}
 	p.Ignored.values = make(map[string]bool)
 	for _, option := range options {
