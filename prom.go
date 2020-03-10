@@ -47,7 +47,7 @@ type Prometheus struct {
 	PathMap     pmap
 }
 
-// DecrementGaugeValue increments a custom gauge
+// IncrementGaugeValue increments a custom gauge
 func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) error {
 	if g, ok := p.customGauges[name]; ok {
 		g.WithLabelValues(labelValues...).Inc()
