@@ -31,12 +31,17 @@ type pmapb struct {
 	values map[string]bool
 }
 
+type pmapGauge struct {
+	sync.RWMutex
+	values map[string]prometheus.GaugeVec
+}
+
 // Prometheus contains the metrics gathered by the instance and its path
 type Prometheus struct {
 	reqCnt               *prometheus.CounterVec
 	reqDur, reqSz, resSz prometheus.Summary
 
-	customGauges map[string]prometheus.GaugeVec
+	customGauges pmapGauge
 
 	MetricsPath string
 	Namespace   string
@@ -47,9 +52,12 @@ type Prometheus struct {
 	PathMap     pmap
 }
 
-// DecrementGaugeValue increments a custom gauge
+// IncrementGaugeValue increments a custom gauge
 func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) error {
-	if g, ok := p.customGauges[name]; ok {
+	p.customGauges.Lock()
+	defer p.customGauges.Unlock()
+	
+	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Inc()
 	} else {
 		return errors.New("error finding custom gauge")
@@ -59,7 +67,10 @@ func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) erro
 
 // SetGaugeValue set gauge to value
 func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value float64) error {
-	if g, ok := p.customGauges[name]; ok {
+	p.customGauges.Lock()
+	defer p.customGauges.Unlock()
+	
+	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Set(value)
 	} else {
 		return errors.New("error finding custom gauge")
@@ -69,7 +80,10 @@ func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value floa
 
 // DecrementGaugeValue decrements a custom gauge
 func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) error {
-	if g, ok := p.customGauges[name]; ok {
+	p.customGauges.Lock()
+	defer p.customGauges.Unlock()
+	
+	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Dec()
 	} else {
 		return errors.New("error finding custom gauge")
@@ -79,6 +93,9 @@ func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) erro
 
 // AddCustomGauge adds a custom gauge and registers it
 func (p *Prometheus) AddCustomGauge(name, help string, labels []string) {
+	p.customGauges.Lock()
+	defer p.customGauges.Unlock()
+	
 	g := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: p.Namespace,
 		Subsystem: p.Subsystem,
@@ -86,7 +103,7 @@ func (p *Prometheus) AddCustomGauge(name, help string, labels []string) {
 		Help:      help,
 	},
 		labels)
-	p.customGauges[name] = *g
+	p.customGauges.values[name] = *g
 	prometheus.MustRegister(g)
 }
 
@@ -152,8 +169,6 @@ func New(options ...func(*Prometheus)) *Prometheus {
 		MetricsPath: defaultPath,
 		Namespace:   defaultNs,
 		Subsystem:   defaultSys,
-
-		customGauges: make(map[string]prometheus.GaugeVec),
 	}
 	p.Ignored.values = make(map[string]bool)
 	for _, option := range options {
