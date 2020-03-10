@@ -1,4 +1,4 @@
-// Package ginprom is a library to instrument a gin server and expose a 
+// Package ginprom is a library to instrument a gin server and expose a
 // /metrics endpoint for Prometheus to scrape, keeping a low cardinality by
 // preserving the path parameters name in the prometheus label
 package ginprom
@@ -31,10 +31,17 @@ type pmapb struct {
 	values map[string]bool
 }
 
+type pmapGauge struct {
+	sync.RWMutex
+	values map[string]prometheus.GaugeVec
+}
+
 // Prometheus contains the metrics gathered by the instance and its path
 type Prometheus struct {
 	reqCnt               *prometheus.CounterVec
 	reqDur, reqSz, resSz prometheus.Summary
+
+	customGauges pmapGauge
 
 	MetricsPath string
 	Namespace   string
@@ -43,6 +50,61 @@ type Prometheus struct {
 	Ignored     pmapb
 	Engine      *gin.Engine
 	PathMap     pmap
+}
+
+// IncrementGaugeValue increments a custom gauge
+func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) error {
+	p.customGauges.RLock()
+	defer p.customGauges.RUnlock()
+	
+	if g, ok := p.customGauges.values[name]; ok {
+		g.WithLabelValues(labelValues...).Inc()
+	} else {
+		return errors.New("error finding custom gauge")
+	}
+	return nil
+}
+
+// SetGaugeValue set gauge to value
+func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value float64) error {
+	p.customGauges.RLock()
+	defer p.customGauges.RUnlock()
+	
+	if g, ok := p.customGauges.values[name]; ok {
+		g.WithLabelValues(labelValues...).Set(value)
+	} else {
+		return errors.New("error finding custom gauge")
+	}
+	return nil
+}
+
+// DecrementGaugeValue decrements a custom gauge
+func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) error {
+	p.customGauges.RLock()
+	defer p.customGauges.RUnlock()
+	
+	if g, ok := p.customGauges.values[name]; ok {
+		g.WithLabelValues(labelValues...).Dec()
+	} else {
+		return errors.New("error finding custom gauge")
+	}
+	return nil
+}
+
+// AddCustomGauge adds a custom gauge and registers it
+func (p *Prometheus) AddCustomGauge(name, help string, labels []string) {
+	p.customGauges.Lock()
+	defer p.customGauges.Unlock()
+	
+	g := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: p.Namespace,
+		Subsystem: p.Subsystem,
+		Name:      name,
+		Help:      help,
+	},
+		labels)
+	p.customGauges.values[name] = *g
+	prometheus.MustRegister(g)
 }
 
 // Path is an option allowing to set the metrics path when intializing with New

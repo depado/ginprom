@@ -49,6 +49,25 @@ func main() {
 
 ## Options
 
+### Custom gauges
+
+Add custom gauges to add own values to the metrics
+
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r),
+)
+p.AddCustomGauge("custom", "Some help text to provide", []string{"label"})
+r.Use(p.Instrument())
+```
+
+Save `p` and use the following functions:
+
+- IncrementGaugeValue
+- DecrementGaugeValue
+- SetGaugeValue
+
 ### Path
 
 Override the default path (`/metrics`) on which the metrics can be accessed:
