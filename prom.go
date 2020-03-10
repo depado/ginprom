@@ -52,7 +52,7 @@ func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) erro
 	if g, ok := p.customGauges[name]; ok {
 		g.WithLabelValues(labelValues...).Inc()
 	} else {
-		errors.New("error finding custom gauge")
+		return errors.New("error finding custom gauge")
 	}
 	return nil
 }
@@ -62,7 +62,7 @@ func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value floa
 	if g, ok := p.customGauges[name]; ok {
 		g.WithLabelValues(labelValues...).Set(value)
 	} else {
-		errors.New("error finding custom gauge")
+		return errors.New("error finding custom gauge")
 	}
 	return nil
 }
@@ -72,7 +72,7 @@ func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) erro
 	if g, ok := p.customGauges[name]; ok {
 		g.WithLabelValues(labelValues...).Dec()
 	} else {
-		errors.New("error finding custom gauge")
+		return errors.New("error finding custom gauge")
 	}
 	return nil
 }
