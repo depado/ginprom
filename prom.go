@@ -54,8 +54,8 @@ type Prometheus struct {
 
 // IncrementGaugeValue increments a custom gauge
 func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) error {
-	p.customGauges.Lock()
-	defer p.customGauges.Unlock()
+	p.customGauges.RLock()
+	defer p.customGauges.RUnlock()
 	
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Inc()
@@ -67,8 +67,8 @@ func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) erro
 
 // SetGaugeValue set gauge to value
 func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value float64) error {
-	p.customGauges.Lock()
-	defer p.customGauges.Unlock()
+	p.customGauges.RLock()
+	defer p.customGauges.RUnlock()
 	
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Set(value)
@@ -80,8 +80,8 @@ func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value floa
 
 // DecrementGaugeValue decrements a custom gauge
 func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) error {
-	p.customGauges.Lock()
-	defer p.customGauges.Unlock()
+	p.customGauges.RLock()
+	defer p.customGauges.RUnlock()
 	
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Dec()
