@@ -279,3 +279,91 @@ func TestMetricsBearerToken(t *testing.T) {
 		})
 	unregister(p)
 }
+
+func TestInstrumentCustomMetrics(t *testing.T) {
+	var helpText = "help text"
+	var labels = []string{"label1"}
+	var name = "custom"
+
+	r := gin.New()
+	p := New(Engine(r))
+	p.AddCustomGauge(name, helpText, labels)
+	r.Use(p.Instrument())
+
+	r.GET("/inc", func(c *gin.Context) {
+		err := p.IncrementGaugeValue(name, labels)
+		assert.NoError(t, err, "should not fail with same gauge name")
+		c.Status(http.StatusOK)
+	})
+
+	r.GET("/dec", func(c *gin.Context) {
+		err := p.DecrementGaugeValue(name, labels)
+		assert.NoError(t, err, "should not fail with same gauge name")
+		c.Status(http.StatusOK)
+	})
+
+	r.GET("/set", func(c *gin.Context) {
+		err := p.SetGaugeValue(name, labels, 10)
+		assert.NoError(t, err, "should not fail with same gauge name")
+		c.Status(http.StatusOK)
+	})
+
+	g := gofight.New()
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.NotContains(t, r.Body.String(), fmt.Sprintf(`# HELP gin_gonic_%s %s`, name, helpText))
+		assert.NotContains(t, r.Body.String(), fmt.Sprintf(`gin_gonic_%s{%s="%s"} 0`, name, labels[0], labels[0]))
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET("/inc").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`# HELP gin_gonic_%s %s`, name, helpText))
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`gin_gonic_%s{%s="%s"} 1`, name, labels[0], labels[0]))
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET("/dec").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`# HELP gin_gonic_%s %s`, name, helpText))
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`gin_gonic_%s{%s="%s"} 0`, name, labels[0], labels[0]))
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET("/set").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`# HELP gin_gonic_%s %s`, name, helpText))
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`gin_gonic_%s{%s="%s"} 10`, name, labels[0], labels[0]))
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	unregister(p)
+}
+
+func TestInstrumentCustomMetricsErrors(t *testing.T) {
+	r := gin.New()
+	p := New(Engine(r))
+	r.Use(p.Instrument())
+
+	r.GET("/err", func(c *gin.Context) {
+		err := p.IncrementGaugeValue("notfound", []string{})
+		assert.EqualError(t, err, "error finding custom gauge")
+		c.Status(http.StatusOK)
+	})
+	g := gofight.New()
+
+	g.GET("/err").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	unregister(p)
+}

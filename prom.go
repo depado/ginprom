@@ -56,7 +56,7 @@ type Prometheus struct {
 func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) error {
 	p.customGauges.RLock()
 	defer p.customGauges.RUnlock()
-	
+
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Inc()
 	} else {
@@ -69,7 +69,7 @@ func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) erro
 func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value float64) error {
 	p.customGauges.RLock()
 	defer p.customGauges.RUnlock()
-	
+
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Set(value)
 	} else {
@@ -82,7 +82,7 @@ func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value floa
 func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) error {
 	p.customGauges.RLock()
 	defer p.customGauges.RUnlock()
-	
+
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Dec()
 	} else {
@@ -95,7 +95,7 @@ func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) erro
 func (p *Prometheus) AddCustomGauge(name, help string, labels []string) {
 	p.customGauges.Lock()
 	defer p.customGauges.Unlock()
-	
+
 	g := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: p.Namespace,
 		Subsystem: p.Subsystem,
@@ -170,6 +170,7 @@ func New(options ...func(*Prometheus)) *Prometheus {
 		Namespace:   defaultNs,
 		Subsystem:   defaultSys,
 	}
+	p.customGauges.values = make(map[string]prometheus.GaugeVec)
 	p.Ignored.values = make(map[string]bool)
 	for _, option := range options {
 		option(p)
