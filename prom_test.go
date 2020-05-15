@@ -132,6 +132,17 @@ func TestUse(t *testing.T) {
 	unregister(p)
 }
 
+func TestBucketSize(t *testing.T) {
+	p := New()
+	assert.Nil(t, p.BucketsSize, "namespace should be default")
+	unregister(p)
+
+	bs := []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
+	p = New(BucketSize(bs))
+	assert.Equal(t, p.BucketsSize, bs, "should match")
+	unregister(p)
+}
+
 func TestInstrument(t *testing.T) {
 	r := gin.New()
 	p := New(Engine(r))

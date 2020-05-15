@@ -173,6 +173,20 @@ p := ginprom.New(
 r.Use(p.Instrument())
 ```
 
+### Bucket size
+
+Specify the bucket size for the request duration histogram according to your
+expected durations.
+
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r),
+	ginprom.BucketSize([]float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}),
+)
+r.Use(p.Instrument())
+```
+
 ## Troubleshooting
 
 ### The instrumentation doesn't seem to work

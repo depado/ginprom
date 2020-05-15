@@ -38,8 +38,9 @@ type pmapGauge struct {
 
 // Prometheus contains the metrics gathered by the instance and its path
 type Prometheus struct {
-	reqCnt               *prometheus.CounterVec
-	reqDur, reqSz, resSz prometheus.Summary
+	reqCnt       *prometheus.CounterVec
+	reqDur       *prometheus.HistogramVec
+	reqSz, resSz prometheus.Summary
 
 	customGauges pmapGauge
 
@@ -50,6 +51,7 @@ type Prometheus struct {
 	Ignored     pmapb
 	Engine      *gin.Engine
 	PathMap     pmap
+	BucketsSize []float64
 }
 
 // IncrementGaugeValue increments a custom gauge
@@ -122,6 +124,12 @@ func Ignore(paths ...string) func(*Prometheus) {
 		for _, path := range paths {
 			p.Ignored.values[path] = true
 		}
+	}
+}
+
+func BucketSize(b []float64) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.BucketsSize = b
 	}
 }
 
@@ -222,14 +230,13 @@ func (p *Prometheus) register() {
 	)
 	prometheus.MustRegister(p.reqCnt)
 
-	p.reqDur = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Namespace: p.Namespace,
-			Subsystem: p.Subsystem,
-			Name:      "request_duration_seconds",
-			Help:      "The HTTP request latencies in seconds.",
-		},
-	)
+	p.reqDur = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: p.Namespace,
+		Subsystem: p.Subsystem,
+		Buckets:   p.BucketsSize,
+		Name:      "request_duration",
+		Help:      "The HTTP request latency bucket",
+	}, []string{"method", "path"})
 	prometheus.MustRegister(p.reqDur)
 
 	p.reqSz = prometheus.NewSummary(
@@ -281,8 +288,8 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 		elapsed := float64(time.Since(start)) / float64(time.Second)
 		resSz := float64(c.Writer.Size())
 
-		p.reqDur.Observe(elapsed)
 		p.reqCnt.WithLabelValues(status, c.Request.Method, c.HandlerName(), c.Request.Host, path).Inc()
+		p.reqDur.WithLabelValues(c.Request.Method, path).Observe(elapsed)
 		p.reqSz.Observe(float64(reqSz))
 		p.resSz.Observe(resSz)
 	}
