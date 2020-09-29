@@ -52,6 +52,7 @@ type Prometheus struct {
 	Engine      *gin.Engine
 	PathMap     pmap
 	BucketsSize []float64
+	Registry    *prometheus.Registry
 }
 
 // IncrementGaugeValue increments a custom gauge
@@ -168,6 +169,18 @@ func Engine(e *gin.Engine) func(*Prometheus) {
 	}
 }
 
+// Registry is an option allowing to set a  *prometheus.Registry with New.
+// Use this option if you want to use a custom Registry instead of a global one that prometheus
+// client uses by default
+// Example :
+// r := gin.Default()
+// p := ginprom.New(Registry(r))
+func Registry(r *prometheus.Registry) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.Registry = r
+	}
+}
+
 // New will initialize a new Prometheus instance with the given options.
 // If no options are passed, sane defaults are used.
 // If a router is passed using the Engine() option, this instance will
@@ -183,12 +196,22 @@ func New(options ...func(*Prometheus)) *Prometheus {
 	for _, option := range options {
 		option(p)
 	}
+
 	p.register()
 	if p.Engine != nil {
-		p.Engine.GET(p.MetricsPath, prometheusHandler(p.Token))
+		registerer, gatherer := p.getRegistererAndGatherer()
+		p.Engine.GET(p.MetricsPath, prometheusHandler(p.Token, registerer, gatherer))
 	}
 
 	return p
+}
+
+func (p *Prometheus) getRegistererAndGatherer() (prometheus.Registerer, prometheus.Gatherer)  {
+	if p.Registry == nil {
+		return prometheus.DefaultRegisterer, prometheus.DefaultGatherer
+	} else {
+		return p.Registry, p.Registry
+	}
 }
 
 func (p *Prometheus) update() {
@@ -219,6 +242,7 @@ func (p *Prometheus) get(handler string) (string, bool) {
 }
 
 func (p *Prometheus) register() {
+	registerer, _ := p.getRegistererAndGatherer()
 	p.reqCnt = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: p.Namespace,
@@ -228,7 +252,7 @@ func (p *Prometheus) register() {
 		},
 		[]string{"code", "method", "handler", "host", "path"},
 	)
-	prometheus.MustRegister(p.reqCnt)
+	registerer.MustRegister(p.reqCnt)
 
 	p.reqDur = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: p.Namespace,
@@ -237,7 +261,7 @@ func (p *Prometheus) register() {
 		Name:      "request_duration",
 		Help:      "The HTTP request latency bucket",
 	}, []string{"method", "path"})
-	prometheus.MustRegister(p.reqDur)
+	registerer.MustRegister(p.reqDur)
 
 	p.reqSz = prometheus.NewSummary(
 		prometheus.SummaryOpts{
@@ -247,7 +271,7 @@ func (p *Prometheus) register() {
 			Help:      "The HTTP request sizes in bytes.",
 		},
 	)
-	prometheus.MustRegister(p.reqSz)
+	registerer.MustRegister(p.reqSz)
 
 	p.resSz = prometheus.NewSummary(
 		prometheus.SummaryOpts{
@@ -257,7 +281,7 @@ func (p *Prometheus) register() {
 			Help:      "The HTTP response sizes in bytes.",
 		},
 	)
-	prometheus.MustRegister(p.resSz)
+	registerer.MustRegister(p.resSz)
 }
 
 // Instrument is a gin middleware that can be used to generate metrics for a
@@ -298,12 +322,15 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 // Use is a method that should be used if the engine is set after middleware
 // initialization
 func (p *Prometheus) Use(e *gin.Engine) {
-	e.GET(p.MetricsPath, prometheusHandler(p.Token))
+	registerer, gatherer := p.getRegistererAndGatherer()
+	e.GET(p.MetricsPath, prometheusHandler(p.Token, registerer, gatherer))
 	p.Engine = e
 }
 
-func prometheusHandler(token string) gin.HandlerFunc {
-	h := promhttp.Handler()
+func prometheusHandler(token string, registerer prometheus.Registerer, gatherer prometheus.Gatherer) gin.HandlerFunc {
+	h := promhttp.InstrumentMetricHandler(
+		registerer, promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}),
+	)
 	return func(c *gin.Context) {
 		if token == "" {
 			h.ServeHTTP(c.Writer, c.Request)

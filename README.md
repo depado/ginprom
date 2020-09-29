@@ -130,6 +130,21 @@ r.Use(p.Instrument())
 
 ```
 
+### Prometheus Registry
+
+Use a custom `prometheus.Registry` instead of prometheus client's global registry. This option allows
+to use ginprom in multiple gin engines in the same process, or if you would like to integrate ginprom with your own
+prometheus `Registry`.
+
+```go
+registry := prometheus.NewRegistry() // creates new prometheus metric registry
+r := gin.New()
+p := ginprom.New(
+    ginprom.Registry(registry),
+)
+r.Use(p.Instrument())
+```
+
 ### Ignore
 
 Ignore allows to completely ignore some routes. Even though you can apply the
