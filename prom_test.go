@@ -82,6 +82,13 @@ func TestEngine(t *testing.T) {
 	unregister(p)
 }
 
+func TestRegistry(t *testing.T)  {
+	registry := prometheus.NewRegistry()
+
+	p := New(Registry(registry))
+	assert.Equal(t, p.Registry, registry)
+}
+
 func TestNamespace(t *testing.T) {
 	p := New()
 	assert.Equal(t, p.Namespace, defaultNs, "namespace should be default")
@@ -377,4 +384,15 @@ func TestInstrumentCustomMetricsErrors(t *testing.T) {
 	})
 
 	unregister(p)
+}
+
+func TestMultipleGinWithDifferentRegistry(t *testing.T)  {
+	// with different registries we don't panic because of multiple metric registration attempt
+	r1 := gin.New()
+	p1 := New(Engine(r1), Registry(prometheus.NewRegistry()))
+	r1.Use(p1.Instrument())
+
+	r2 := gin.New()
+	p2 := New(Engine(r2), Registry(prometheus.NewRegistry()))
+	r2.Use(p2.Instrument())
 }
