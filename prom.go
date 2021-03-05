@@ -24,7 +24,7 @@ var defaultSys = "gonic"
 var ErrInvalidToken = errors.New("invalid or missing token")
 
 // ErrCustomGauge is returned when the custom gauge can't be found.
-var ErrCustomGauge = errors.New("error finding custome gauge")
+var ErrCustomGauge = errors.New("error finding custom gauge")
 
 type pmapb struct {
 	sync.RWMutex
