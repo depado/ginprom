@@ -275,7 +275,7 @@ func TestMetricsBearerToken(t *testing.T) {
 
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusUnauthorized, r.Code)
-		assert.Equal(t, errInvalidToken.Error(), r.Body.String())
+		assert.Equal(t, ErrInvalidToken.Error(), r.Body.String())
 	})
 
 	g.GET(p.MetricsPath).
@@ -284,7 +284,7 @@ func TestMetricsBearerToken(t *testing.T) {
 		}).
 		Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 			assert.Equal(t, http.StatusUnauthorized, r.Code)
-			assert.Equal(t, errInvalidToken.Error(), r.Body.String())
+			assert.Equal(t, ErrInvalidToken.Error(), r.Body.String())
 		})
 
 	g.GET(p.MetricsPath).

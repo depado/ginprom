@@ -19,12 +19,12 @@ import (
 var defaultPath = "/metrics"
 var defaultNs = "gin"
 var defaultSys = "gonic"
-var errInvalidToken = errors.New("Invalid or missing token")
 
-type pmap struct {
-	sync.RWMutex
-	values map[string]string
-}
+// ErrInvalidToken is returned when the provided token is invalid or missing.
+var ErrInvalidToken = errors.New("invalid or missing token")
+
+// ErrCustomGauge is returned when the custom gauge can't be found.
+var ErrCustomGauge = errors.New("error finding custome gauge")
 
 type pmapb struct {
 	sync.RWMutex
@@ -36,7 +36,7 @@ type pmapGauge struct {
 	values map[string]prometheus.GaugeVec
 }
 
-// Prometheus contains the metrics gathered by the instance and its path
+// Prometheus contains the metrics gathered by the instance and its path.
 type Prometheus struct {
 	reqCnt       *prometheus.CounterVec
 	reqDur       *prometheus.HistogramVec
@@ -50,12 +50,11 @@ type Prometheus struct {
 	Token       string
 	Ignored     pmapb
 	Engine      *gin.Engine
-	PathMap     pmap
 	BucketsSize []float64
 	Registry    *prometheus.Registry
 }
 
-// IncrementGaugeValue increments a custom gauge
+// IncrementGaugeValue increments a custom gauge.
 func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) error {
 	p.customGauges.RLock()
 	defer p.customGauges.RUnlock()
@@ -63,12 +62,12 @@ func (p *Prometheus) IncrementGaugeValue(name string, labelValues []string) erro
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Inc()
 	} else {
-		return errors.New("error finding custom gauge")
+		return ErrCustomGauge
 	}
 	return nil
 }
 
-// SetGaugeValue set gauge to value
+// SetGaugeValue sets gauge to value.
 func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value float64) error {
 	p.customGauges.RLock()
 	defer p.customGauges.RUnlock()
@@ -76,12 +75,12 @@ func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value floa
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Set(value)
 	} else {
-		return errors.New("error finding custom gauge")
+		return ErrCustomGauge
 	}
 	return nil
 }
 
-// DecrementGaugeValue decrements a custom gauge
+// DecrementGaugeValue decrements a custom gauge.
 func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) error {
 	p.customGauges.RLock()
 	defer p.customGauges.RUnlock()
@@ -89,12 +88,12 @@ func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) erro
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Dec()
 	} else {
-		return errors.New("error finding custom gauge")
+		return ErrCustomGauge
 	}
 	return nil
 }
 
-// AddCustomGauge adds a custom gauge and registers it
+// AddCustomGauge adds a custom gauge and registers it.
 func (p *Prometheus) AddCustomGauge(name, help string, labels []string) {
 	p.customGauges.Lock()
 	defer p.customGauges.Unlock()
@@ -110,14 +109,14 @@ func (p *Prometheus) AddCustomGauge(name, help string, labels []string) {
 	prometheus.MustRegister(g)
 }
 
-// Path is an option allowing to set the metrics path when intializing with New
+// Path is an option allowing to set the metrics path when intializing with New.
 func Path(path string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.MetricsPath = path
 	}
 }
 
-// Ignore is used to disable instrumentation on some routes
+// Ignore is used to disable instrumentation on some routes.
 func Ignore(paths ...string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.Ignored.Lock()
@@ -128,6 +127,8 @@ func Ignore(paths ...string) func(*Prometheus) {
 	}
 }
 
+// BucketSize is used to define the default bucket size when initializing with
+// New.
 func BucketSize(b []float64) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.BucketsSize = b
@@ -135,7 +136,7 @@ func BucketSize(b []float64) func(*Prometheus) {
 }
 
 // Subsystem is an option allowing to set the subsystem when intitializing
-// with New
+// with New.
 func Subsystem(sub string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.Subsystem = sub
@@ -143,7 +144,7 @@ func Subsystem(sub string) func(*Prometheus) {
 }
 
 // Namespace is an option allowing to set the namespace when intitializing
-// with New
+// with New.
 func Namespace(ns string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.Namespace = ns
@@ -152,7 +153,7 @@ func Namespace(ns string) func(*Prometheus) {
 
 // Token is an option allowing to set the bearer token in prometheus
 // with New.
-// Example : ginprom.New(ginprom.Token("your_custom_token"))
+// Example: ginprom.New(ginprom.Token("your_custom_token"))
 func Token(token string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.Token = token
@@ -160,7 +161,7 @@ func Token(token string) func(*Prometheus) {
 }
 
 // Engine is an option allowing to set the gin engine when intializing with New.
-// Example :
+// Example:
 // r := gin.Default()
 // p := ginprom.New(Engine(r))
 func Engine(e *gin.Engine) func(*Prometheus) {
@@ -172,7 +173,7 @@ func Engine(e *gin.Engine) func(*Prometheus) {
 // Registry is an option allowing to set a  *prometheus.Registry with New.
 // Use this option if you want to use a custom Registry instead of a global one that prometheus
 // client uses by default
-// Example :
+// Example:
 // r := gin.Default()
 // p := ginprom.New(Registry(r))
 func Registry(r *prometheus.Registry) func(*Prometheus) {
@@ -206,39 +207,11 @@ func New(options ...func(*Prometheus)) *Prometheus {
 	return p
 }
 
-func (p *Prometheus) getRegistererAndGatherer() (prometheus.Registerer, prometheus.Gatherer)  {
+func (p *Prometheus) getRegistererAndGatherer() (prometheus.Registerer, prometheus.Gatherer) {
 	if p.Registry == nil {
 		return prometheus.DefaultRegisterer, prometheus.DefaultGatherer
-	} else {
-		return p.Registry, p.Registry
 	}
-}
-
-func (p *Prometheus) update() {
-	p.PathMap.Lock()
-	p.Ignored.RLock()
-	if p.PathMap.values == nil {
-		p.PathMap.values = make(map[string]string)
-	}
-	defer func() {
-		p.PathMap.Unlock()
-		p.Ignored.RUnlock()
-	}()
-	if p.Engine != nil {
-		for _, ri := range p.Engine.Routes() {
-			if _, ok := p.Ignored.values[ri.Path]; ok {
-				continue
-			}
-			p.PathMap.values[ri.Handler] = ri.Path
-		}
-	}
-}
-
-func (p *Prometheus) get(handler string) (string, bool) {
-	p.PathMap.RLock()
-	defer p.PathMap.RUnlock()
-	in, ok := p.PathMap.values[handler]
-	return in, ok
+	return p.Registry, p.Registry
 }
 
 func (p *Prometheus) register() {
@@ -284,26 +257,25 @@ func (p *Prometheus) register() {
 	registerer.MustRegister(p.resSz)
 }
 
+func (p *Prometheus) isIgnored(path string) bool {
+	p.Ignored.RLock()
+	defer p.Ignored.RUnlock()
+	_, ok := p.Ignored.values[path]
+	return ok
+}
+
 // Instrument is a gin middleware that can be used to generate metrics for a
 // single handler
 func (p *Prometheus) Instrument() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		p.PathMap.RLock()
-		if p.PathMap.values == nil {
-			p.PathMap.RUnlock()
-			p.update()
-		} else {
-			p.PathMap.RUnlock()
-		}
-		var path string
-		var found bool
-
 		start := time.Now()
+		path := c.FullPath()
 
-		if path, found = p.get(c.HandlerName()); !found {
+		if path == "" || p.isIgnored(path) {
 			c.Next()
 			return
 		}
+
 		reqSz := computeApproximateRequestSize(c.Request)
 
 		c.Next()
@@ -320,7 +292,7 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 }
 
 // Use is a method that should be used if the engine is set after middleware
-// initialization
+// initialization.
 func (p *Prometheus) Use(e *gin.Engine) {
 	registerer, gatherer := p.getRegistererAndGatherer()
 	e.GET(p.MetricsPath, prometheusHandler(p.Token, registerer, gatherer))
@@ -340,14 +312,14 @@ func prometheusHandler(token string, registerer prometheus.Registerer, gatherer 
 		header := c.Request.Header.Get("Authorization")
 
 		if header == "" {
-			c.String(http.StatusUnauthorized, errInvalidToken.Error())
+			c.String(http.StatusUnauthorized, ErrInvalidToken.Error())
 			return
 		}
 
 		bearer := fmt.Sprintf("Bearer %s", token)
 
 		if header != bearer {
-			c.String(http.StatusUnauthorized, errInvalidToken.Error())
+			c.String(http.StatusUnauthorized, ErrInvalidToken.Error())
 			return
 		}
 
