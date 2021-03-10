@@ -82,7 +82,7 @@ func TestEngine(t *testing.T) {
 	unregister(p)
 }
 
-func TestRegistry(t *testing.T)  {
+func TestRegistry(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
 	p := New(Registry(registry))
@@ -104,6 +104,46 @@ func TestNamespace(t *testing.T) {
 		assert.Equal(t, p.Namespace, test, "should match")
 		unregister(p)
 	}
+}
+
+func TestRequestCounterMetricName(t *testing.T) {
+	p := New()
+	assert.Equal(t, p.RequestCounterMetricName, defaultReqCntMetricName, "subsystem should be default")
+	unregister(p)
+
+	p = New(RequestCounterMetricName("another_req_cnt_metric_name"))
+	assert.Equal(t, p.RequestCounterMetricName, "another_req_cnt_metric_name", "should match")
+	unregister(p)
+}
+
+func TestRequestDurationMetricName(t *testing.T) {
+	p := New()
+	assert.Equal(t, p.RequestDurationMetricName, defaultReqDurMetricName, "subsystem should be default")
+	unregister(p)
+
+	p = New(RequestDurationMetricName("another_req_dur_metric_name"))
+	assert.Equal(t, p.RequestDurationMetricName, "another_req_dur_metric_name", "should match")
+	unregister(p)
+}
+
+func TestRequestSizeMetricName(t *testing.T) {
+	p := New()
+	assert.Equal(t, p.RequestSizeMetricName, defaultReqSzMetricName, "subsystem should be default")
+	unregister(p)
+
+	p = New(RequestSizeMetricName("another_req_sz_metric_name"))
+	assert.Equal(t, p.RequestSizeMetricName, "another_req_sz_metric_name", "should match")
+	unregister(p)
+}
+
+func TestResponseSizeMetricName(t *testing.T) {
+	p := New()
+	assert.Equal(t, p.ResponseSizeMetricName, defaultResSzMetricName, "subsystem should be default")
+	unregister(p)
+
+	p = New(ResponseSizeMetricName("another_res_sz_metric_name"))
+	assert.Equal(t, p.ResponseSizeMetricName, "another_res_sz_metric_name", "should match")
+	unregister(p)
 }
 
 func TestSubsystem(t *testing.T) {
@@ -386,7 +426,7 @@ func TestInstrumentCustomMetricsErrors(t *testing.T) {
 	unregister(p)
 }
 
-func TestMultipleGinWithDifferentRegistry(t *testing.T)  {
+func TestMultipleGinWithDifferentRegistry(t *testing.T) {
 	// with different registries we don't panic because of multiple metric registration attempt
 	r1 := gin.New()
 	p1 := New(Engine(r1), Registry(prometheus.NewRegistry()))

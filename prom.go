@@ -20,6 +20,11 @@ var defaultPath = "/metrics"
 var defaultNs = "gin"
 var defaultSys = "gonic"
 
+var defaultReqCntMetricName = "requests_total"
+var defaultReqDurMetricName = "request_duration"
+var defaultReqSzMetricName = "request_size_bytes"
+var defaultResSzMetricName = "response_size_bytes"
+
 // ErrInvalidToken is returned when the provided token is invalid or missing.
 var ErrInvalidToken = errors.New("invalid or missing token")
 
@@ -52,6 +57,11 @@ type Prometheus struct {
 	Engine      *gin.Engine
 	BucketsSize []float64
 	Registry    *prometheus.Registry
+
+	RequestCounterMetricName  string
+	RequestDurationMetricName string
+	RequestSizeMetricName     string
+	ResponseSizeMetricName    string
 }
 
 // IncrementGaugeValue increments a custom gauge.
@@ -160,6 +170,34 @@ func Token(token string) func(*Prometheus) {
 	}
 }
 
+// RequestCounterMetricName is an option allowing to set the request counter metric name.
+func RequestCounterMetricName(reqCntMetricName string) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.RequestCounterMetricName = reqCntMetricName
+	}
+}
+
+// RequestDurationMetricName is an option allowing to set the request duration metric name.
+func RequestDurationMetricName(reqDurMetricName string) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.RequestDurationMetricName = reqDurMetricName
+	}
+}
+
+// RequestSizeMetricName is an option allowing to set the request size metric name.
+func RequestSizeMetricName(reqSzMetricName string) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.RequestSizeMetricName = reqSzMetricName
+	}
+}
+
+// ResponseSizeMetricName is an option allowing to set the response size metric name.
+func ResponseSizeMetricName(resDurMetricName string) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.ResponseSizeMetricName = resDurMetricName
+	}
+}
+
 // Engine is an option allowing to set the gin engine when intializing with New.
 // Example:
 // r := gin.Default()
@@ -188,9 +226,13 @@ func Registry(r *prometheus.Registry) func(*Prometheus) {
 // automatically bind to it.
 func New(options ...func(*Prometheus)) *Prometheus {
 	p := &Prometheus{
-		MetricsPath: defaultPath,
-		Namespace:   defaultNs,
-		Subsystem:   defaultSys,
+		MetricsPath:               defaultPath,
+		Namespace:                 defaultNs,
+		Subsystem:                 defaultSys,
+		RequestCounterMetricName:  defaultReqCntMetricName,
+		RequestDurationMetricName: defaultReqDurMetricName,
+		RequestSizeMetricName:     defaultReqSzMetricName,
+		ResponseSizeMetricName:    defaultResSzMetricName,
 	}
 	p.customGauges.values = make(map[string]prometheus.GaugeVec)
 	p.Ignored.values = make(map[string]bool)
@@ -220,7 +262,7 @@ func (p *Prometheus) register() {
 		prometheus.CounterOpts{
 			Namespace: p.Namespace,
 			Subsystem: p.Subsystem,
-			Name:      "requests_total",
+			Name:      p.RequestCounterMetricName,
 			Help:      "How many HTTP requests processed, partitioned by status code and HTTP method.",
 		},
 		[]string{"code", "method", "handler", "host", "path"},
@@ -231,8 +273,8 @@ func (p *Prometheus) register() {
 		Namespace: p.Namespace,
 		Subsystem: p.Subsystem,
 		Buckets:   p.BucketsSize,
-		Name:      "request_duration",
-		Help:      "The HTTP request latency bucket",
+		Name:      p.RequestDurationMetricName,
+		Help:      "The HTTP request latency bucket.",
 	}, []string{"method", "path"})
 	registerer.MustRegister(p.reqDur)
 
@@ -240,7 +282,7 @@ func (p *Prometheus) register() {
 		prometheus.SummaryOpts{
 			Namespace: p.Namespace,
 			Subsystem: p.Subsystem,
-			Name:      "request_size_bytes",
+			Name:      p.RequestSizeMetricName,
 			Help:      "The HTTP request sizes in bytes.",
 		},
 	)
@@ -250,7 +292,7 @@ func (p *Prometheus) register() {
 		prometheus.SummaryOpts{
 			Namespace: p.Namespace,
 			Subsystem: p.Subsystem,
-			Name:      "response_size_bytes",
+			Name:      p.ResponseSizeMetricName,
 			Help:      "The HTTP response sizes in bytes.",
 		},
 	)
