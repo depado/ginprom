@@ -366,6 +366,18 @@ func TestInstrumentCustomMetrics(t *testing.T) {
 		c.Status(http.StatusOK)
 	})
 
+	r.GET("/add", func(c *gin.Context) {
+		err := p.AddGaugeValue(name, labels, 10)
+		assert.NoError(t, err, "should not fail with same gauge name")
+		c.Status(http.StatusOK)
+	})
+
+	r.GET("/sub", func(c *gin.Context) {
+		err := p.SubGaugeValue(name, labels, 10)
+		assert.NoError(t, err, "should not fail with same gauge name")
+		c.Status(http.StatusOK)
+	})
+
 	g := gofight.New()
 
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
@@ -395,6 +407,26 @@ func TestInstrumentCustomMetrics(t *testing.T) {
 	})
 
 	g.GET("/set").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`# HELP gin_gonic_%s %s`, name, helpText))
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`gin_gonic_%s{%s="%s"} 10`, name, labels[0], labels[0]))
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET("/add").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`# HELP gin_gonic_%s %s`, name, helpText))
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`gin_gonic_%s{%s="%s"} 20`, name, labels[0], labels[0]))
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET("/sub").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
 	})
 

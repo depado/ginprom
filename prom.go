@@ -90,6 +90,19 @@ func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value floa
 	return nil
 }
 
+// AddGaugeValue adds gauge to value.
+func (p *Prometheus) AddGaugeValue(name string, labelValues []string, value float64) error {
+	p.customGauges.RLock()
+	defer p.customGauges.RUnlock()
+
+	if g, ok := p.customGauges.values[name]; ok {
+		g.WithLabelValues(labelValues...).Add(value)
+	} else {
+		return ErrCustomGauge
+	}
+	return nil
+}
+
 // DecrementGaugeValue decrements a custom gauge.
 func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) error {
 	p.customGauges.RLock()
@@ -97,6 +110,19 @@ func (p *Prometheus) DecrementGaugeValue(name string, labelValues []string) erro
 
 	if g, ok := p.customGauges.values[name]; ok {
 		g.WithLabelValues(labelValues...).Dec()
+	} else {
+		return ErrCustomGauge
+	}
+	return nil
+}
+
+// SubGaugeValue adds gauge to value.
+func (p *Prometheus) SubGaugeValue(name string, labelValues []string, value float64) error {
+	p.customGauges.RLock()
+	defer p.customGauges.RUnlock()
+
+	if g, ok := p.customGauges.values[name]; ok {
+		g.WithLabelValues(labelValues...).Sub(value)
 	} else {
 		return ErrCustomGauge
 	}
