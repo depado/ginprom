@@ -41,13 +41,11 @@ steps:
     token:
       from_secret: telegram_token
     message: >
-      *{{repo.name}}*
-      [Build {{build.number}}]({{build.link}}) by {{commit.author}} {{#success build.status}}succeeded{{else}}failed{{/success}} in {{buildtime build.started}}
+      *{{repo.name}}*  
+
+      [Build {{build.number}}]({{build.link}}) by {{commit.author}} {{#success build.status}}succeeded{{else}}failed{{/success}} in {{buildtime build.started}}  
+
       `{{truncate commit.sha 8}}`: "{{commit.message}}"
-  when:
-    status:
-    - success
-    - failure
 
 volumes:
 - name: deps
