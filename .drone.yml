@@ -9,7 +9,7 @@ steps:
   - git fetch --tags
 
 - name: test
-  image: golang:latest
+  image: golang:1.20.0
   volumes:
   - name: deps
     path: /go
@@ -17,7 +17,7 @@ steps:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
 
 - name: linter
-  image: golang:latest
+  image: golang:1.20.0
   volumes:
     - name: deps
       path: /go
@@ -41,10 +41,6 @@ steps:
     format: markdown
     token:
       from_secret: telegram_token
-    message: >
-      *{{repo.name}}*  
-      [Build {{build.number}}]({{build.link}}) by {{commit.author}} {{#success build.status}}succeeded{{else}}failed{{/success}} in {{buildtime build.started}}  
-      `{{truncate commit.sha 8}}`: "{{commit.message}}"
 
 volumes:
 - name: deps
