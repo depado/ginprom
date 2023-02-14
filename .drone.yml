@@ -9,7 +9,7 @@ steps:
   - git fetch --tags
 
 - name: test
-  image: golang:1.20.0
+  image: golang:1.20.1
   volumes:
   - name: deps
     path: /go
@@ -17,7 +17,7 @@ steps:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
 
 - name: linter
-  image: golang:1.20.0
+  image: golang:1.20.1
   volumes:
     - name: deps
       path: /go
