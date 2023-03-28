@@ -370,10 +370,63 @@ func TestMetricsBearerToken(t *testing.T) {
 	unregister(p)
 }
 
-func TestInstrumentCustomMetrics(t *testing.T) {
+func TestInstrumentCustomCounter(t *testing.T) {
 	var helpText = "help text"
 	var labels = []string{"label1"}
-	var name = "custom"
+	var name = "custom_counter"
+
+	r := gin.New()
+	p := New(Engine(r))
+	p.AddCustomCounter(name, helpText, labels)
+	r.Use(p.Instrument())
+
+	r.GET("/inc", func(c *gin.Context) {
+		err := p.IncrementCounterValue(name, labels)
+		assert.NoError(t, err, "should not fail with same Counter name")
+		c.Status(http.StatusOK)
+	})
+
+	r.GET("/add", func(c *gin.Context) {
+		err := p.AddCounterValue(name, labels, 10)
+		assert.NoError(t, err, "should not fail with same Counter name")
+		c.Status(http.StatusOK)
+	})
+
+	g := gofight.New()
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.NotContains(t, r.Body.String(), fmt.Sprintf(`# HELP gin_gonic_%s %s`, name, helpText))
+		assert.NotContains(t, r.Body.String(), fmt.Sprintf(`gin_gonic_%s{%s="%s"} 0`, name, labels[0], labels[0]))
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET("/inc").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`# HELP gin_gonic_%s %s`, name, helpText))
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`gin_gonic_%s{%s="%s"} 1`, name, labels[0], labels[0]))
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET("/add").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`# HELP gin_gonic_%s %s`, name, helpText))
+		assert.Contains(t, r.Body.String(), fmt.Sprintf(`gin_gonic_%s{%s="%s"} 11`, name, labels[0], labels[0]))
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	unregister(p)
+}
+
+func TestInstrumentCustomGauge(t *testing.T) {
+	var helpText = "help text"
+	var labels = []string{"label1"}
+	var name = "custom_gauge"
 
 	r := gin.New()
 	p := New(Engine(r))

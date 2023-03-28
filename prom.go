@@ -32,6 +32,9 @@ var ErrInvalidToken = errors.New("invalid or missing token")
 // ErrCustomGauge is returned when the custom gauge can't be found.
 var ErrCustomGauge = errors.New("error finding custom gauge")
 
+// ErrCustomCounter is returned when the custom counter can't be found.
+var ErrCustomCounter = errors.New("error finding custom counter")
+
 type pmapb struct {
 	sync.RWMutex
 	values map[string]bool
@@ -42,13 +45,19 @@ type pmapGauge struct {
 	values map[string]prometheus.GaugeVec
 }
 
+type pmapCounter struct {
+	sync.RWMutex
+	values map[string]prometheus.CounterVec
+}
+
 // Prometheus contains the metrics gathered by the instance and its path.
 type Prometheus struct {
 	reqCnt       *prometheus.CounterVec
 	reqDur       *prometheus.HistogramVec
 	reqSz, resSz prometheus.Summary
 
-	customGauges pmapGauge
+	customGauges   pmapGauge
+	customCounters pmapCounter
 
 	MetricsPath     string
 	Namespace       string
@@ -92,7 +101,7 @@ func (p *Prometheus) SetGaugeValue(name string, labelValues []string, value floa
 	return nil
 }
 
-// AddGaugeValue adds gauge to value.
+// AddGaugeValue adds value to custom gauge.
 func (p *Prometheus) AddGaugeValue(name string, labelValues []string, value float64) error {
 	p.customGauges.RLock()
 	defer p.customGauges.RUnlock()
@@ -147,7 +156,47 @@ func (p *Prometheus) AddCustomGauge(name, help string, labels []string) {
 	prometheus.MustRegister(g)
 }
 
-// Path is an option allowing to set the metrics path when intializing with New.
+// IncrementCounterValue increments a custom counter.
+func (p *Prometheus) IncrementCounterValue(name string, labelValues []string) error {
+	p.customCounters.RLock()
+	defer p.customCounters.RUnlock()
+
+	if g, ok := p.customCounters.values[name]; ok {
+		g.WithLabelValues(labelValues...).Inc()
+	} else {
+		return ErrCustomCounter
+	}
+	return nil
+}
+
+// AddCounterValue adds value to custom counter.
+func (p *Prometheus) AddCounterValue(name string, labelValues []string, value float64) error {
+	p.customCounters.RLock()
+	defer p.customCounters.RUnlock()
+
+	if g, ok := p.customCounters.values[name]; ok {
+		g.WithLabelValues(labelValues...).Add(value)
+	} else {
+		return ErrCustomCounter
+	}
+	return nil
+}
+
+// AddCustomCounter adds a custom counter and registers it.
+func (p *Prometheus) AddCustomCounter(name, help string, labels []string) {
+	p.customCounters.Lock()
+	defer p.customCounters.Unlock()
+	g := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: p.Namespace,
+		Subsystem: p.Subsystem,
+		Name:      name,
+		Help:      help,
+	}, labels)
+	p.customCounters.values[name] = *g
+	prometheus.MustRegister(g)
+}
+
+// Path is an option allowing to set the metrics path when initializing with New.
 func Path(path string) func(*Prometheus) {
 	return func(p *Prometheus) {
 		p.MetricsPath = path
@@ -173,7 +222,7 @@ func BucketSize(b []float64) func(*Prometheus) {
 	}
 }
 
-// Subsystem is an option allowing to set the subsystem when intitializing
+// Subsystem is an option allowing to set the subsystem when initializing
 // with New.
 func Subsystem(sub string) func(*Prometheus) {
 	return func(p *Prometheus) {
@@ -181,7 +230,7 @@ func Subsystem(sub string) func(*Prometheus) {
 	}
 }
 
-// Namespace is an option allowing to set the namespace when intitializing
+// Namespace is an option allowing to set the namespace when initializing
 // with New.
 func Namespace(ns string) func(*Prometheus) {
 	return func(p *Prometheus) {
@@ -277,6 +326,8 @@ func New(options ...func(*Prometheus)) *Prometheus {
 		ResponseSizeMetricName:    defaultResSzMetricName,
 	}
 	p.customGauges.values = make(map[string]prometheus.GaugeVec)
+	p.customCounters.values = make(map[string]prometheus.CounterVec)
+
 	p.Ignored.values = make(map[string]bool)
 	for _, option := range options {
 		option(p)

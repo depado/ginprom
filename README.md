@@ -48,6 +48,24 @@ func main() {
 
 ## Options
 
+### Custom Counters
+
+Add custom counters to add own values to the metrics
+
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r),
+)
+p.AddCustomCounter("custom", "Some help text to provide", []string{"label"})
+r.Use(p.Instrument())
+```
+
+Save `p` and use the following functions:
+
+- IncrementCounterValue
+- AddCounterValue
+
 ### Custom gauges
 
 Add custom gauges to add own values to the metrics
