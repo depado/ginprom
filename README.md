@@ -1,4 +1,5 @@
-# ginprom
+<h1 align="center">Ginprom</h1>
+<h2 align="center">
 
 Gin Prometheus metrics exporter inspired by [github.com/zsais/go-gin-prometheus](https://github.com/zsais/go-gin-prometheus)
 
@@ -8,6 +9,25 @@ Gin Prometheus metrics exporter inspired by [github.com/zsais/go-gin-prometheus]
 [![codecov](https://codecov.io/gh/Depado/ginprom/branch/master/graph/badge.svg)](https://codecov.io/gh/Depado/ginprom)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Depado/bfchroma/blob/master/LICENSE)
 [![godoc](https://godoc.org/github.com/Depado/ginprom?status.svg)](https://godoc.org/github.com/Depado/ginprom)
+
+</h2>
+
+- [Install](#install)
+- [Differences with go-gin-prometheus](#differences-with-go-gin-prometheus)
+- [Usage](#usage)
+- [Options](#options)
+	- [Custom Counters](#custom-counters)
+	- [Custom gauges](#custom-gauges)
+	- [Path](#path)
+	- [Namespace](#namespace)
+	- [Subsystem](#subsystem)
+	- [Engine](#engine)
+	- [Prometheus Registry](#prometheus-registry)
+	- [Ignore](#ignore)
+	- [Token](#token)
+	- [Bucket size](#bucket-size)
+- [Troubleshooting](#troubleshooting)
+	- [The instrumentation doesn't seem to work](#the-instrumentation-doesnt-seem-to-work)
 
 ## Install
 
