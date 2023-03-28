@@ -89,6 +89,38 @@ func TestRegistry(t *testing.T) {
 	assert.Equal(t, p.Registry, registry)
 }
 
+func TestHandlerNameFunc(t *testing.T) {
+	r := gin.New()
+	registry := prometheus.NewRegistry()
+	handler := "handler_label_should_have_this_value"
+	lhandler := fmt.Sprintf("handler=%q", handler)
+
+	p := New(
+		HandlerNameFunc(func(c *gin.Context) string {
+			return handler
+		}),
+		Registry(registry),
+		Engine(r),
+	)
+
+	r.Use(p.Instrument())
+
+	r.GET("/", func(context *gin.Context) {
+		context.Status(http.StatusOK)
+	})
+
+	g := gofight.New()
+
+	g.GET("/").Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, response.Code, http.StatusOK)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, response.Code, http.StatusOK)
+		assert.Contains(t, response.Body.String(), lhandler)
+	})
+}
+
 func TestNamespace(t *testing.T) {
 	p := New()
 	assert.Equal(t, p.Namespace, defaultNs, "namespace should be default")

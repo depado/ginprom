@@ -19,6 +19,7 @@ import (
 var defaultPath = "/metrics"
 var defaultNs = "gin"
 var defaultSys = "gonic"
+var defaultHandlerNameFunc = (*gin.Context).HandlerName
 
 var defaultReqCntMetricName = "requests_total"
 var defaultReqDurMetricName = "request_duration"
@@ -49,14 +50,15 @@ type Prometheus struct {
 
 	customGauges pmapGauge
 
-	MetricsPath string
-	Namespace   string
-	Subsystem   string
-	Token       string
-	Ignored     pmapb
-	Engine      *gin.Engine
-	BucketsSize []float64
-	Registry    *prometheus.Registry
+	MetricsPath     string
+	Namespace       string
+	Subsystem       string
+	Token           string
+	Ignored         pmapb
+	Engine          *gin.Engine
+	BucketsSize     []float64
+	Registry        *prometheus.Registry
+	HandlerNameFunc func(c *gin.Context) string
 
 	RequestCounterMetricName  string
 	RequestDurationMetricName string
@@ -246,6 +248,19 @@ func Registry(r *prometheus.Registry) func(*Prometheus) {
 	}
 }
 
+// HandlerNameFunc is an option allowing to set the HandlerNameFunc with New.
+// Use this option if you want to override the default behavior (i.e. using
+// (*gin.Context).HandlerName). This is useful when wanting to group different
+// functions under the same "handler" label or when using gin with decorated handlers
+// Example:
+// r := gin.Default()
+// p := ginprom.New(HandlerNameFunc(func (c *gin.Context) string { return "my handler" }))
+func HandlerNameFunc(f func(c *gin.Context) string) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.HandlerNameFunc = f
+	}
+}
+
 // New will initialize a new Prometheus instance with the given options.
 // If no options are passed, sane defaults are used.
 // If a router is passed using the Engine() option, this instance will
@@ -255,6 +270,7 @@ func New(options ...func(*Prometheus)) *Prometheus {
 		MetricsPath:               defaultPath,
 		Namespace:                 defaultNs,
 		Subsystem:                 defaultSys,
+		HandlerNameFunc:           defaultHandlerNameFunc,
 		RequestCounterMetricName:  defaultReqCntMetricName,
 		RequestDurationMetricName: defaultReqDurMetricName,
 		RequestSizeMetricName:     defaultReqSzMetricName,
@@ -352,7 +368,7 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 		elapsed := float64(time.Since(start)) / float64(time.Second)
 		resSz := float64(c.Writer.Size())
 
-		p.reqCnt.WithLabelValues(status, c.Request.Method, c.HandlerName(), c.Request.Host, path).Inc()
+		p.reqCnt.WithLabelValues(status, c.Request.Method, p.HandlerNameFunc(c), c.Request.Host, path).Inc()
 		p.reqDur.WithLabelValues(c.Request.Method, path, c.Request.Host).Observe(elapsed)
 		p.reqSz.Observe(float64(reqSz))
 		p.resSz.Observe(resSz)
