@@ -553,3 +553,49 @@ func TestMultipleGinWithDifferentRegistry(t *testing.T) {
 	p2 := New(Engine(r2), Registry(prometheus.NewRegistry()))
 	r2.Use(p2.Instrument())
 }
+
+func TestCustomGaugeCorrectRegistry(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	p := New(Registry(reg))
+
+	p.AddCustomGauge("some_gauge", "", nil)
+	// increment the gauge value so it is reported by Gather
+	err := p.IncrementGaugeValue("some_gauge", nil)
+	assert.Nil(t, err)
+
+	fams, err := reg.Gather()
+	assert.Nil(t, err)
+	assert.Len(t, fams, 3)
+
+	assert.Condition(t, func() (success bool) {
+		for _, fam := range fams {
+			if fam.GetName() == fmt.Sprintf("%s_%s_some_gauge", p.Namespace, p.Subsystem) {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+func TestCustomCounterCorrectRegistry(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	p := New(Registry(reg))
+
+	p.AddCustomCounter("some_counter", "", nil)
+	// increment the counter value so it is reported by Gather
+	err := p.IncrementCounterValue("some_counter", nil)
+	assert.Nil(t, err)
+
+	fams, err := reg.Gather()
+	assert.Nil(t, err)
+	assert.Len(t, fams, 3)
+
+	assert.Condition(t, func() (success bool) {
+		for _, fam := range fams {
+			if fam.GetName() == fmt.Sprintf("%s_%s_some_counter", p.Namespace, p.Subsystem) {
+				return true
+			}
+		}
+		return false
+	})
+}
