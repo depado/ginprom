@@ -153,7 +153,7 @@ func (p *Prometheus) AddCustomGauge(name, help string, labels []string) {
 	},
 		labels)
 	p.customGauges.values[name] = *g
-	prometheus.MustRegister(g)
+	p.mustRegister(g)
 }
 
 // IncrementCounterValue increments a custom counter.
@@ -193,7 +193,12 @@ func (p *Prometheus) AddCustomCounter(name, help string, labels []string) {
 		Help:      help,
 	}, labels)
 	p.customCounters.values[name] = *g
-	prometheus.MustRegister(g)
+	p.mustRegister(g)
+}
+
+func (p *Prometheus) mustRegister(c ...prometheus.Collector) {
+	registerer, _ := p.getRegistererAndGatherer()
+	registerer.MustRegister(c...)
 }
 
 // Path is an option allowing to set the metrics path when initializing with New.
@@ -350,7 +355,6 @@ func (p *Prometheus) getRegistererAndGatherer() (prometheus.Registerer, promethe
 }
 
 func (p *Prometheus) register() {
-	registerer, _ := p.getRegistererAndGatherer()
 	p.reqCnt = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: p.Namespace,
@@ -360,7 +364,7 @@ func (p *Prometheus) register() {
 		},
 		[]string{"code", "method", "handler", "host", "path"},
 	)
-	registerer.MustRegister(p.reqCnt)
+	p.mustRegister(p.reqCnt)
 
 	p.reqDur = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: p.Namespace,
@@ -369,7 +373,7 @@ func (p *Prometheus) register() {
 		Name:      p.RequestDurationMetricName,
 		Help:      "The HTTP request latency bucket.",
 	}, []string{"method", "path", "host"})
-	registerer.MustRegister(p.reqDur)
+	p.mustRegister(p.reqDur)
 
 	p.reqSz = prometheus.NewSummary(
 		prometheus.SummaryOpts{
@@ -379,7 +383,7 @@ func (p *Prometheus) register() {
 			Help:      "The HTTP request sizes in bytes.",
 		},
 	)
-	registerer.MustRegister(p.reqSz)
+	p.mustRegister(p.reqSz)
 
 	p.resSz = prometheus.NewSummary(
 		prometheus.SummaryOpts{
@@ -389,7 +393,7 @@ func (p *Prometheus) register() {
 			Help:      "The HTTP response sizes in bytes.",
 		},
 	)
-	registerer.MustRegister(p.resSz)
+	p.mustRegister(p.resSz)
 }
 
 func (p *Prometheus) isIgnored(path string) bool {
