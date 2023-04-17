@@ -20,6 +20,7 @@ var defaultPath = "/metrics"
 var defaultNs = "gin"
 var defaultSys = "gonic"
 var defaultHandlerNameFunc = (*gin.Context).HandlerName
+var defaultRequestPathFunc = (*gin.Context).FullPath
 
 var defaultReqCntMetricName = "requests_total"
 var defaultReqDurMetricName = "request_duration"
@@ -68,6 +69,7 @@ type Prometheus struct {
 	BucketsSize     []float64
 	Registry        *prometheus.Registry
 	HandlerNameFunc func(c *gin.Context) string
+	RequestPathFunc func(c *gin.Context) string
 
 	RequestCounterMetricName  string
 	RequestDurationMetricName string
@@ -315,6 +317,28 @@ func HandlerNameFunc(f func(c *gin.Context) string) func(*Prometheus) {
 	}
 }
 
+// RequestPathFunc is an option allowing to set the RequestPathFunc with New.
+// Use this option if you want to override the default behavior (i.e. using
+// (*gin.Context).FullPath). This is useful when wanting to group different requests
+// under the same "path" label or when wanting to process unknown routes (the default
+// (*gin.Context).FullPath return an empty string for unregistered routes). Note that
+// requests for which f returns the empty string are ignored.
+// To specifically ignore certain paths, see the Ignore option.
+// Example:
+//
+//	r := gin.Default()
+//	p := ginprom.New(RequestPathFunc(func (c *gin.Context) string {
+//		if fullpath := c.FullPath(); fullpath != "" {
+//			return fullpath
+//		}
+//		return "<unknown>"
+//	}))
+func RequestPathFunc(f func(c *gin.Context) string) func(*Prometheus) {
+	return func(p *Prometheus) {
+		p.RequestPathFunc = f
+	}
+}
+
 // New will initialize a new Prometheus instance with the given options.
 // If no options are passed, sane defaults are used.
 // If a router is passed using the Engine() option, this instance will
@@ -325,6 +349,7 @@ func New(options ...func(*Prometheus)) *Prometheus {
 		Namespace:                 defaultNs,
 		Subsystem:                 defaultSys,
 		HandlerNameFunc:           defaultHandlerNameFunc,
+		RequestPathFunc:           defaultRequestPathFunc,
 		RequestCounterMetricName:  defaultReqCntMetricName,
 		RequestDurationMetricName: defaultReqDurMetricName,
 		RequestSizeMetricName:     defaultReqSzMetricName,
@@ -408,7 +433,7 @@ func (p *Prometheus) isIgnored(path string) bool {
 func (p *Prometheus) Instrument() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		path := c.FullPath()
+		path := p.RequestPathFunc(c)
 
 		if path == "" || p.isIgnored(path) {
 			c.Next()
