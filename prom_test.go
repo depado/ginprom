@@ -121,6 +121,45 @@ func TestHandlerNameFunc(t *testing.T) {
 	})
 }
 
+func TestRequestPathFunc(t *testing.T) {
+	r := gin.New()
+	registry := prometheus.NewRegistry()
+
+	correctPath := fmt.Sprintf("path=%q", "/some/path")
+	unknownPath := fmt.Sprintf("path=%q", "<unknown>")
+
+	p := New(
+		RequestPathFunc(func(c *gin.Context) string {
+			if fullpath := c.FullPath(); fullpath != "" {
+				return fullpath
+			}
+			return "<unknown>"
+		}),
+		Engine(r),
+		Registry(registry),
+	)
+
+	r.Use(p.Instrument())
+
+	r.GET("/some/path", func(context *gin.Context) {
+		context.Status(http.StatusOK)
+	})
+
+	g := gofight.New()
+	g.GET("/some/path").Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, response.Code, http.StatusOK)
+	})
+	g.GET("/some/other/path").Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, response.Code, http.StatusNotFound)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, response.Code, http.StatusOK)
+		assert.Contains(t, response.Body.String(), correctPath)
+		assert.Contains(t, response.Body.String(), unknownPath)
+	})
+}
+
 func TestNamespace(t *testing.T) {
 	p := New()
 	assert.Equal(t, p.Namespace, defaultNs, "namespace should be default")
