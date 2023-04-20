@@ -207,7 +207,7 @@ func (p *Prometheus) mustRegister(c ...prometheus.Collector) {
 // If no options are passed, sane defaults are used.
 // If a router is passed using the Engine() option, this instance will
 // automatically bind to it.
-func New(options ...func(*Prometheus)) *Prometheus {
+func New(options ...PrometheusOption) *Prometheus {
 	p := &Prometheus{
 		MetricsPath:               defaultPath,
 		Namespace:                 defaultNs,

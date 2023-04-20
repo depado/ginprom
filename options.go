@@ -5,15 +5,17 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+type PrometheusOption func(*Prometheus)
+
 // Path is an option allowing to set the metrics path when initializing with New.
-func Path(path string) func(*Prometheus) {
+func Path(path string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.MetricsPath = path
 	}
 }
 
 // Ignore is used to disable instrumentation on some routes.
-func Ignore(paths ...string) func(*Prometheus) {
+func Ignore(paths ...string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.Ignored.Lock()
 		defer p.Ignored.Unlock()
@@ -25,7 +27,7 @@ func Ignore(paths ...string) func(*Prometheus) {
 
 // BucketSize is used to define the default bucket size when initializing with
 // New.
-func BucketSize(b []float64) func(*Prometheus) {
+func BucketSize(b []float64) PrometheusOption {
 	return func(p *Prometheus) {
 		p.BucketsSize = b
 	}
@@ -33,7 +35,7 @@ func BucketSize(b []float64) func(*Prometheus) {
 
 // Subsystem is an option allowing to set the subsystem when initializing
 // with New.
-func Subsystem(sub string) func(*Prometheus) {
+func Subsystem(sub string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.Subsystem = sub
 	}
@@ -41,7 +43,7 @@ func Subsystem(sub string) func(*Prometheus) {
 
 // Namespace is an option allowing to set the namespace when initializing
 // with New.
-func Namespace(ns string) func(*Prometheus) {
+func Namespace(ns string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.Namespace = ns
 	}
@@ -50,35 +52,35 @@ func Namespace(ns string) func(*Prometheus) {
 // Token is an option allowing to set the bearer token in prometheus
 // with New.
 // Example: ginprom.New(ginprom.Token("your_custom_token"))
-func Token(token string) func(*Prometheus) {
+func Token(token string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.Token = token
 	}
 }
 
 // RequestCounterMetricName is an option allowing to set the request counter metric name.
-func RequestCounterMetricName(reqCntMetricName string) func(*Prometheus) {
+func RequestCounterMetricName(reqCntMetricName string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.RequestCounterMetricName = reqCntMetricName
 	}
 }
 
 // RequestDurationMetricName is an option allowing to set the request duration metric name.
-func RequestDurationMetricName(reqDurMetricName string) func(*Prometheus) {
+func RequestDurationMetricName(reqDurMetricName string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.RequestDurationMetricName = reqDurMetricName
 	}
 }
 
 // RequestSizeMetricName is an option allowing to set the request size metric name.
-func RequestSizeMetricName(reqSzMetricName string) func(*Prometheus) {
+func RequestSizeMetricName(reqSzMetricName string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.RequestSizeMetricName = reqSzMetricName
 	}
 }
 
 // ResponseSizeMetricName is an option allowing to set the response size metric name.
-func ResponseSizeMetricName(resDurMetricName string) func(*Prometheus) {
+func ResponseSizeMetricName(resDurMetricName string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.ResponseSizeMetricName = resDurMetricName
 	}
@@ -88,7 +90,7 @@ func ResponseSizeMetricName(resDurMetricName string) func(*Prometheus) {
 // Example:
 // r := gin.Default()
 // p := ginprom.New(Engine(r))
-func Engine(e *gin.Engine) func(*Prometheus) {
+func Engine(e *gin.Engine) PrometheusOption {
 	return func(p *Prometheus) {
 		p.Engine = e
 	}
@@ -100,7 +102,7 @@ func Engine(e *gin.Engine) func(*Prometheus) {
 // Example:
 // r := gin.Default()
 // p := ginprom.New(Registry(r))
-func Registry(r *prometheus.Registry) func(*Prometheus) {
+func Registry(r *prometheus.Registry) PrometheusOption {
 	return func(p *Prometheus) {
 		p.Registry = r
 	}
@@ -113,7 +115,7 @@ func Registry(r *prometheus.Registry) func(*Prometheus) {
 // Example:
 // r := gin.Default()
 // p := ginprom.New(HandlerNameFunc(func (c *gin.Context) string { return "my handler" }))
-func HandlerNameFunc(f func(c *gin.Context) string) func(*Prometheus) {
+func HandlerNameFunc(f func(c *gin.Context) string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.HandlerNameFunc = f
 	}
@@ -135,7 +137,7 @@ func HandlerNameFunc(f func(c *gin.Context) string) func(*Prometheus) {
 //		}
 //		return "<unknown>"
 //	}))
-func RequestPathFunc(f func(c *gin.Context) string) func(*Prometheus) {
+func RequestPathFunc(f func(c *gin.Context) string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.RequestPathFunc = f
 	}
