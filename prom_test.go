@@ -409,6 +409,23 @@ func TestMetricsBearerToken(t *testing.T) {
 	unregister(p)
 }
 
+func TestCustomCounterErr(t *testing.T) {
+	p := New()
+	assert.Equal(t, p.IncrementCounterValue("not_found", []string{"some", "labels"}), ErrCustomCounter)
+	assert.Equal(t, p.AddCounterValue("not_found", []string{"some", "labels"}, 1.), ErrCustomCounter)
+	unregister(p)
+}
+
+func TestCustomGaugeErr(t *testing.T) {
+	p := New()
+	assert.Equal(t, p.IncrementGaugeValue("not_found", []string{"some", "labels"}), ErrCustomGauge)
+	assert.Equal(t, p.DecrementGaugeValue("not_found", []string{"some", "labels"}), ErrCustomGauge)
+	assert.Equal(t, p.AddGaugeValue("not_found", []string{"some", "labels"}, 1.), ErrCustomGauge)
+	assert.Equal(t, p.SubGaugeValue("not_found", []string{"some", "labels"}, 1.), ErrCustomGauge)
+	assert.Equal(t, p.SetGaugeValue("not_found", []string{"some", "labels"}, 1.), ErrCustomGauge)
+	unregister(p)
+}
+
 func TestInstrumentCustomCounter(t *testing.T) {
 	var helpText = "help text"
 	var labels = []string{"label1"}

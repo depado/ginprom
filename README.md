@@ -182,6 +182,48 @@ p := ginprom.New(
 r.Use(p.Instrument())
 ```
 
+### HandlerNameFunc
+
+Change the way the `handler` label is computed. By default, the `(*gin.Context).HandlerName`
+function is used.
+This option is useful when wanting to group different functions under
+the same `handler` label or when using `gin` with decorated handlers.
+
+```go
+r := gin.Default()
+p := ginprom.New(
+	HandlerNameFunc(func (c *gin.Context) string {
+		return "my handler"
+	}),
+)
+r.Use(p.Instrument())
+```
+
+### RequestPathFunc
+
+Change how the `path` label is computed. By default, the `(*gin.Context).FullPath` function 
+is used.
+This option is useful when wanting to group different requests under the same `path`
+label or when wanting to process unknown routes (the default `(*gin.Context).FullPath` returns
+an empty string for unregistered routes). Note that requests for which `f` returns the empty
+string are ignored.
+
+To specifically ignore certain paths, see the [Ignore](#ignore) option.
+
+```go
+r := gin.Default()
+p := ginprom.New(
+	// record a metric for unregistered routes under the path label "<unknown>"
+	RequestPathFunc(func (c *gin.Context) string {
+		if fullpath := c.FullPath(); fullpath != "" {
+			return fullpath
+		}
+		return "<unknown>"
+	}),
+)
+r.Use(p.Instrument())
+```
+
 ### Ignore
 
 Ignore allows to completely ignore some routes. Even though you can apply the
