@@ -1,7 +1,7 @@
 <h1 align="center">Ginprom</h1>
 <h2 align="center">
 
-Gin Prometheus metrics exporter inspired by [github.com/zsais/go-gin-prometheus](https://github.com/zsais/go-gin-prometheus)
+Gin Prometheus metrics exporter
 
 [![Sourcegraph](https://sourcegraph.com/github.com/Depado/ginprom/-/badge.svg)](https://sourcegraph.com/github.com/Depado/ginprom?badge)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Depado/ginprom)](https://goreportcard.com/report/github.com/Depado/ginprom)
@@ -11,6 +11,11 @@ Gin Prometheus metrics exporter inspired by [github.com/zsais/go-gin-prometheus]
 [![godoc](https://godoc.org/github.com/Depado/ginprom?status.svg)](https://godoc.org/github.com/Depado/ginprom)
 
 </h2>
+<h4 align="center">
+
+Inspired by [github.com/zsais/go-gin-prometheus](https://github.com/zsais/go-gin-prometheus)
+
+</h4>
 
 - [Install](#install)
 - [Differences with go-gin-prometheus](#differences-with-go-gin-prometheus)
@@ -201,7 +206,7 @@ r.Use(p.Instrument())
 
 ### RequestPathFunc
 
-Change how the `path` label is computed. By default, the `(*gin.Context).FullPath` function 
+Change how the `path` label is computed. By default, the `(*gin.Context).FullPath` function
 is used.
 This option is useful when wanting to group different requests under the same `path`
 label or when wanting to process unknown routes (the default `(*gin.Context).FullPath` returns
