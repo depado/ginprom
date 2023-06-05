@@ -70,6 +70,7 @@ type Prometheus struct {
 	Registry        *prometheus.Registry
 	HandlerNameFunc func(c *gin.Context) string
 	RequestPathFunc func(c *gin.Context) string
+	HandlerOpts     promhttp.HandlerOpts
 
 	RequestCounterMetricName  string
 	RequestDurationMetricName string
@@ -229,8 +230,7 @@ func New(options ...PrometheusOption) *Prometheus {
 
 	p.register()
 	if p.Engine != nil {
-		registerer, gatherer := p.getRegistererAndGatherer()
-		p.Engine.GET(p.MetricsPath, prometheusHandler(p.Token, registerer, gatherer))
+		p.Engine.GET(p.MetricsPath, p.prometheusHandler(p.Token))
 	}
 
 	return p
@@ -322,14 +322,14 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 // Use is a method that should be used if the engine is set after middleware
 // initialization.
 func (p *Prometheus) Use(e *gin.Engine) {
-	registerer, gatherer := p.getRegistererAndGatherer()
-	e.GET(p.MetricsPath, prometheusHandler(p.Token, registerer, gatherer))
+	e.GET(p.MetricsPath, p.prometheusHandler(p.Token))
 	p.Engine = e
 }
 
-func prometheusHandler(token string, registerer prometheus.Registerer, gatherer prometheus.Gatherer) gin.HandlerFunc {
+func (p *Prometheus) prometheusHandler(token string) gin.HandlerFunc {
+	registerer, gatherer := p.getRegistererAndGatherer()
 	h := promhttp.InstrumentMetricHandler(
-		registerer, promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}),
+		registerer, promhttp.HandlerFor(gatherer, p.HandlerOpts),
 	)
 	return func(c *gin.Context) {
 		if token == "" {

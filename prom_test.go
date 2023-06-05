@@ -5,10 +5,12 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/appleboy/gofight/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -118,6 +120,33 @@ func TestHandlerNameFunc(t *testing.T) {
 	g.GET(p.MetricsPath).Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
 		assert.Equal(t, response.Code, http.StatusOK)
 		assert.Contains(t, response.Body.String(), lhandler)
+	})
+}
+
+func TestHandlerOpts(t *testing.T) {
+	r := gin.New()
+	registry := prometheus.NewRegistry()
+
+	p := New(
+		HandlerOpts(promhttp.HandlerOpts{Timeout: time.Nanosecond}),
+		Registry(registry),
+		Engine(r),
+	)
+
+	r.Use(p.Instrument())
+
+	r.GET("/", func(context *gin.Context) {
+		context.Status(http.StatusServiceUnavailable)
+	})
+
+	g := gofight.New()
+
+	g.GET("/").Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, response.Code, http.StatusServiceUnavailable)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, response.Code, http.StatusServiceUnavailable)
 	})
 }
 

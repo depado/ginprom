@@ -3,6 +3,7 @@ package ginprom
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type PrometheusOption func(*Prometheus)
@@ -118,6 +119,14 @@ func Registry(r *prometheus.Registry) PrometheusOption {
 func HandlerNameFunc(f func(c *gin.Context) string) PrometheusOption {
 	return func(p *Prometheus) {
 		p.HandlerNameFunc = f
+	}
+}
+
+// HandlerOpts is an option allowing to set the promhttp.HandlerOpts.
+// Use this option if you want to override the default zero value.
+func HandlerOpts(opts promhttp.HandlerOpts) PrometheusOption {
+	return func(p *Prometheus) {
+		p.HandlerOpts = opts
 	}
 }
 
