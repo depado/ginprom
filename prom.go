@@ -26,6 +26,8 @@ var defaultReqCntMetricName = "requests_total"
 var defaultReqDurMetricName = "request_duration"
 var defaultReqSzMetricName = "request_size_bytes"
 var defaultResSzMetricName = "response_size_bytes"
+var defaultVersionMetricName = "version"
+var defaultUpTimeMetricName = "up_time"
 
 // ErrInvalidToken is returned when the provided token is invalid or missing.
 var ErrInvalidToken = errors.New("invalid or missing token")
@@ -54,6 +56,8 @@ type pmapCounter struct {
 // Prometheus contains the metrics gathered by the instance and its path.
 type Prometheus struct {
 	reqCnt       *prometheus.CounterVec
+	version      prometheus.GaugeFunc
+	upTime       *prometheus.CounterVec
 	reqDur       *prometheus.HistogramVec
 	reqSz, resSz prometheus.Summary
 
@@ -75,6 +79,8 @@ type Prometheus struct {
 	RequestDurationMetricName string
 	RequestSizeMetricName     string
 	ResponseSizeMetricName    string
+	UpTimeMetricName          string
+	VersionMetricName         string
 }
 
 // IncrementGaugeValue increments a custom gauge.
@@ -218,6 +224,7 @@ func New(options ...PrometheusOption) *Prometheus {
 		RequestDurationMetricName: defaultReqDurMetricName,
 		RequestSizeMetricName:     defaultReqSzMetricName,
 		ResponseSizeMetricName:    defaultResSzMetricName,
+		UpTimeMetricName:          defaultUpTimeMetricName,
 	}
 	p.customGauges.values = make(map[string]prometheus.GaugeVec)
 	p.customCounters.values = make(map[string]prometheus.CounterVec)
@@ -232,8 +239,33 @@ func New(options ...PrometheusOption) *Prometheus {
 		registerer, gatherer := p.getRegistererAndGatherer()
 		p.Engine.GET(p.MetricsPath, prometheusHandler(p.Token, registerer, gatherer))
 	}
+	go p.recordUptime()
 
 	return p
+}
+
+// SetVersionInfo registers constant version info
+// versionInfo: ie:
+//
+//	map[string]string{
+//		 "version": "V1.0.1",
+//		 "language": "Go 1.19.7",
+//		 "author": "@Depado",
+//	}
+func (p *Prometheus) SetVersionInfo(versionInfo map[string]string) {
+	p.VersionMetricName = defaultVersionMetricName
+	p.version = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Namespace:   p.Namespace,
+			Subsystem:   p.Subsystem,
+			Name:        p.VersionMetricName,
+			Help:        "Version.",
+			ConstLabels: versionInfo,
+		}, func() float64 {
+			return 1
+		},
+	)
+	p.mustRegister(p.version)
 }
 
 func (p *Prometheus) getRegistererAndGatherer() (prometheus.Registerer, prometheus.Gatherer) {
@@ -254,6 +286,16 @@ func (p *Prometheus) register() {
 		[]string{"code", "method", "handler", "host", "path"},
 	)
 	p.mustRegister(p.reqCnt)
+
+	p.upTime = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: p.Namespace,
+			Subsystem: p.Subsystem,
+			Name:      p.UpTimeMetricName,
+			Help:      "System Up-Time.",
+		}, nil,
+	)
+	p.mustRegister(p.upTime)
 
 	p.reqDur = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: p.Namespace,
@@ -290,6 +332,13 @@ func (p *Prometheus) isIgnored(path string) bool {
 	defer p.Ignored.RUnlock()
 	_, ok := p.Ignored.values[path]
 	return ok
+}
+
+// recordUptime increases service uptime per second.
+func (p *Prometheus) recordUptime() {
+	for range time.Tick(time.Second) {
+		p.upTime.WithLabelValues().Inc()
+	}
 }
 
 // Instrument is a gin middleware that can be used to generate metrics for a

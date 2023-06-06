@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/appleboy/gofight/v2"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,10 @@ func unregister(p *Prometheus) {
 	prometheus.Unregister(p.reqDur)
 	prometheus.Unregister(p.reqSz)
 	prometheus.Unregister(p.resSz)
+	prometheus.Unregister(p.upTime)
+	if p.version != nil {
+		prometheus.Unregister(p.version)
+	}
 }
 
 func init() {
@@ -59,7 +64,7 @@ func TestPath(t *testing.T) {
 // Set a secret token that is required to access the endpoint
 func ExampleToken() {
 	r := gin.New()
-	p := New(Engine(r), Token("supersecrettoken"))
+	p := New(Engine(r), Token("superSecretToken"))
 	r.Use(p.Instrument())
 }
 
@@ -93,7 +98,7 @@ func TestHandlerNameFunc(t *testing.T) {
 	r := gin.New()
 	registry := prometheus.NewRegistry()
 	handler := "handler_label_should_have_this_value"
-	lhandler := fmt.Sprintf("handler=%q", handler)
+	handlerLabel := fmt.Sprintf("handler=%q", handler)
 
 	p := New(
 		HandlerNameFunc(func(c *gin.Context) string {
@@ -117,7 +122,7 @@ func TestHandlerNameFunc(t *testing.T) {
 
 	g.GET(p.MetricsPath).Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
 		assert.Equal(t, response.Code, http.StatusOK)
-		assert.Contains(t, response.Body.String(), lhandler)
+		assert.Contains(t, response.Body.String(), handlerLabel)
 	})
 }
 
@@ -130,8 +135,8 @@ func TestRequestPathFunc(t *testing.T) {
 
 	p := New(
 		RequestPathFunc(func(c *gin.Context) string {
-			if fullpath := c.FullPath(); fullpath != "" {
-				return fullpath
+			if fullPath := c.FullPath(); fullPath != "" {
+				return fullPath
 			}
 			return "<unknown>"
 		}),
@@ -266,7 +271,7 @@ func TestInstrument(t *testing.T) {
 	p := New(Engine(r))
 	r.Use(p.Instrument())
 	path := "/user/:id"
-	lpath := fmt.Sprintf(`path="%s"`, path)
+	pathLabel := fmt.Sprintf(`path="%s"`, path)
 
 	r.GET(path, func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"id": c.Param("id")})
@@ -276,7 +281,7 @@ func TestInstrument(t *testing.T) {
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.NotContains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
-		assert.NotContains(t, r.Body.String(), lpath, "path must not be present in the response")
+		assert.NotContains(t, r.Body.String(), pathLabel, "path must not be present in the response")
 	})
 
 	g.GET("/user/10").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) { assert.Equal(t, http.StatusOK, r.Code) })
@@ -284,7 +289,7 @@ func TestInstrument(t *testing.T) {
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Contains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
-		assert.Contains(t, r.Body.String(), lpath, "path must be present in the response")
+		assert.Contains(t, r.Body.String(), pathLabel, "path must be present in the response")
 		assert.NotContains(t, r.Body.String(), `path="/user/10"`, "raw path must not be present")
 	})
 
@@ -296,7 +301,7 @@ func TestThreadedInstrument(t *testing.T) {
 	p := New(Engine(r))
 	r.Use(p.Instrument())
 	path := "/user/:id"
-	lpath := fmt.Sprintf(`path="%s"`, path)
+	pathLabel := fmt.Sprintf(`path="%s"`, path)
 
 	r.GET(path, func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"id": c.Param("id")})
@@ -312,7 +317,7 @@ func TestThreadedInstrument(t *testing.T) {
 			g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 				assert.Equal(t, http.StatusOK, r.Code)
 				assert.Contains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
-				assert.Contains(t, r.Body.String(), lpath, "path must be present in the response")
+				assert.Contains(t, r.Body.String(), pathLabel, "path must be present in the response")
 				assert.NotContains(t, r.Body.String(), `path="/user/10"`, "raw path must not be present")
 			})
 			wg.Done()
@@ -339,12 +344,12 @@ func TestEmptyRouter(t *testing.T) {
 
 func TestIgnore(t *testing.T) {
 	r := gin.New()
-	ipath := "/ping"
-	lipath := fmt.Sprintf(`path="%s"`, ipath)
-	p := New(Engine(r), Ignore(ipath))
+	pathIgnore := "/ping"
+	pathIgnoreLabel := fmt.Sprintf(`path="%s"`, pathIgnore)
+	p := New(Engine(r), Ignore(pathIgnore))
 	r.Use(p.Instrument())
 
-	r.GET(ipath, func(c *gin.Context) {
+	r.GET(pathIgnore, func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
@@ -359,7 +364,7 @@ func TestIgnore(t *testing.T) {
 	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.NotContains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
-		assert.NotContains(t, r.Body.String(), lipath, "ignored path must not be present")
+		assert.NotContains(t, r.Body.String(), pathIgnoreLabel, "ignored path must not be present")
 	})
 	unregister(p)
 }
@@ -619,12 +624,12 @@ func TestCustomGaugeCorrectRegistry(t *testing.T) {
 	err := p.IncrementGaugeValue("some_gauge", nil)
 	assert.Nil(t, err)
 
-	fams, err := reg.Gather()
+	metricFamily, err := reg.Gather()
 	assert.Nil(t, err)
-	assert.Len(t, fams, 3)
+	assert.Len(t, metricFamily, 3)
 
 	assert.Condition(t, func() (success bool) {
-		for _, fam := range fams {
+		for _, fam := range metricFamily {
 			if fam.GetName() == fmt.Sprintf("%s_%s_some_gauge", p.Namespace, p.Subsystem) {
 				return true
 			}
@@ -642,16 +647,58 @@ func TestCustomCounterCorrectRegistry(t *testing.T) {
 	err := p.IncrementCounterValue("some_counter", nil)
 	assert.Nil(t, err)
 
-	fams, err := reg.Gather()
+	metricFamily, err := reg.Gather()
 	assert.Nil(t, err)
-	assert.Len(t, fams, 3)
+	assert.Len(t, metricFamily, 3)
 
 	assert.Condition(t, func() (success bool) {
-		for _, fam := range fams {
+		for _, fam := range metricFamily {
 			if fam.GetName() == fmt.Sprintf("%s_%s_some_counter", p.Namespace, p.Subsystem) {
 				return true
 			}
 		}
 		return false
 	})
+}
+
+func TestUpTime(t *testing.T) {
+	correctUpTime := "up_time 2"
+
+	r := gin.New()
+	p := New(Engine(r))
+
+	r.Use(p.Instrument())
+	time.Sleep(2 * time.Second)
+
+	g := gofight.New()
+	g.GET(p.MetricsPath).Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, response.Code)
+		assert.Contains(t, response.Body.String(), correctUpTime)
+	})
+	unregister(p)
+}
+
+func TestVersionInfo(t *testing.T) {
+	versionInfo := map[string]string{
+		"version":  "V1.0.1",
+		"language": "Go 1.20",
+		"author":   "@Depado",
+	}
+	correctVersion := "version{"
+
+	r := gin.New()
+	p := New(Engine(r))
+	p.SetVersionInfo(versionInfo)
+
+	r.Use(p.Instrument())
+
+	g := gofight.New()
+	g.GET(p.MetricsPath).Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, response.Code)
+		assert.Contains(t, response.Body.String(), correctVersion)
+		assert.Contains(t, response.Body.String(), versionInfo["version"])
+		assert.Contains(t, response.Body.String(), versionInfo["language"])
+		assert.Contains(t, response.Body.String(), versionInfo["author"])
+	})
+	unregister(p)
 }
