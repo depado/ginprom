@@ -234,13 +234,12 @@ r.Use(p.Instrument())
 
 ### CustomCounterLabels
 
-Add custom labels to the counter metric. This option is useful when wanting to
-add custom labels to the counter metric.
+Add custom labels to the counter metric.
 
 ```go
 r := gin.Default()
 p := ginprom.New(
-  ginprom.CustomLabels([]string{"client_id"}, func(c *gin.Context) map[string]string {
+  ginprom.CustomCounterLabels([]string{"client_id"}, func(c *gin.Context) map[string]string {
     client_id := c.GetHeader("x-client-id")
     if client_id == "" {
       client_id = "unknown"

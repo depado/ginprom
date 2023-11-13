@@ -366,6 +366,64 @@ func TestEmptyRouter(t *testing.T) {
 	unregister(p)
 }
 
+func TestCustomCounterMetrics(t *testing.T) {
+	r := gin.New()
+	p := New(Engine(r), CustomCounterLabels([]string{"client_id", "tenant_id"}, func(c *gin.Context) map[string]string {
+		clientId := c.GetHeader("X-Client-ID")
+		if clientId == "" {
+			clientId = "unknown"
+		}
+		tenantId := c.GetHeader("X-Tenant-ID")
+		if tenantId == "" {
+			tenantId = "unknown"
+		}
+		return map[string]string{
+			"client_id": clientId,
+			"tenant_id": tenantId,
+		}
+	}))
+	r.Use(p.Instrument())
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	g := gofight.New()
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.NotContains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
+		assert.NotContains(t, r.Body.String(), "client_id")
+		assert.NotContains(t, r.Body.String(), "tenant_id")
+	})
+
+	g.GET("/ping").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) { assert.Equal(t, http.StatusOK, r.Code) })
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		body := r.Body.String()
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.Contains(t, body, prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
+		assert.Contains(t, r.Body.String(), "client_id=\"unknown\"")
+		assert.Contains(t, r.Body.String(), "tenant_id=\"unknown\"")
+		assert.NotContains(t, r.Body.String(), "client_id=\"client-id\"")
+		assert.NotContains(t, r.Body.String(), "tenant_id=\"tenant-id\"")
+	})
+
+	g.GET("/ping").
+		SetHeader(gofight.H{"X-Client-Id": "client-id", "X-Tenant-Id": "tenant-id"}).
+		Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) { assert.Equal(t, http.StatusOK, r.Code) })
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		body := r.Body.String()
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.Contains(t, body, prometheus.BuildFQName(p.Namespace, p.Subsystem, "requests_total"))
+		assert.Contains(t, r.Body.String(), "client_id=\"unknown\"")
+		assert.Contains(t, r.Body.String(), "tenant_id=\"unknown\"")
+		assert.Contains(t, r.Body.String(), "client_id=\"client-id\"")
+		assert.Contains(t, r.Body.String(), "tenant_id=\"tenant-id\"")
+	})
+	unregister(p)
+}
+
 func TestIgnore(t *testing.T) {
 	r := gin.New()
 	ipath := "/ping"
