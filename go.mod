@@ -1,4 +1,4 @@
-module github.com/Depado/ginprom
+module github.com/sralloza/ginprom
 
 go 1.20
 

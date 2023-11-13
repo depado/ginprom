@@ -151,3 +151,10 @@ func RequestPathFunc(f func(c *gin.Context) string) PrometheusOption {
 		p.RequestPathFunc = f
 	}
 }
+
+func CustomCounterLabels(labels []string, f func(c *gin.Context) map[string]string) PrometheusOption {
+	return func(p *Prometheus) {
+		p.customCounterLabelsProvider = f
+		p.customCounterLabels = labels
+	}
+}
