@@ -57,8 +57,10 @@ type Prometheus struct {
 	reqDur       *prometheus.HistogramVec
 	reqSz, resSz prometheus.Summary
 
-	customGauges   pmapGauge
-	customCounters pmapCounter
+	customGauges                pmapGauge
+	customCounters              pmapCounter
+	customCounterLabelsProvider func(c *gin.Context) map[string]string
+	customCounterLabels         []string
 
 	MetricsPath     string
 	Namespace       string
@@ -222,6 +224,7 @@ func New(options ...PrometheusOption) *Prometheus {
 	}
 	p.customGauges.values = make(map[string]prometheus.GaugeVec)
 	p.customCounters.values = make(map[string]prometheus.CounterVec)
+	p.customCounterLabels = make([]string, 0)
 
 	p.Ignored.values = make(map[string]bool)
 	for _, option := range options {
@@ -251,7 +254,7 @@ func (p *Prometheus) register() {
 			Name:      p.RequestCounterMetricName,
 			Help:      "How many HTTP requests processed, partitioned by status code and HTTP method.",
 		},
-		[]string{"code", "method", "handler", "host", "path"},
+		append([]string{"code", "method", "handler", "host", "path"}, p.customCounterLabels...),
 	)
 	p.mustRegister(p.reqCnt)
 
@@ -312,7 +315,15 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 		elapsed := float64(time.Since(start)) / float64(time.Second)
 		resSz := float64(c.Writer.Size())
 
-		p.reqCnt.WithLabelValues(status, c.Request.Method, p.HandlerNameFunc(c), c.Request.Host, path).Inc()
+		labels := []string{status, c.Request.Method, p.HandlerNameFunc(c), c.Request.Host, path}
+		if p.customCounterLabelsProvider != nil {
+			extraLabels := p.customCounterLabelsProvider(c)
+			for _, label := range p.customCounterLabels {
+				labels = append(labels, extraLabels[label])
+			}
+		}
+
+		p.reqCnt.WithLabelValues(labels...).Inc()
 		p.reqDur.WithLabelValues(c.Request.Method, path, c.Request.Host).Observe(elapsed)
 		p.reqSz.Observe(float64(reqSz))
 		p.resSz.Observe(resSz)

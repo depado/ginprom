@@ -28,6 +28,9 @@ Inspired by [github.com/zsais/go-gin-prometheus](https://github.com/zsais/go-gin
 	- [Subsystem](#subsystem)
 	- [Engine](#engine)
 	- [Prometheus Registry](#prometheus-registry)
+	- [HandlerNameFunc](#handlernamefunc)
+	- [RequestPathFunc](#requestpathfunc)
+	- [CustomCounterLabels](#customcounterlabels)
 	- [Ignore](#ignore)
 	- [Token](#token)
 	- [Bucket size](#bucket-size)
@@ -225,6 +228,24 @@ p := ginprom.New(
 		}
 		return "<unknown>"
 	}),
+)
+r.Use(p.Instrument())
+```
+
+### CustomCounterLabels
+
+Add custom labels to the counter metric.
+
+```go
+r := gin.Default()
+p := ginprom.New(
+  ginprom.CustomCounterLabels([]string{"client_id"}, func(c *gin.Context) map[string]string {
+    client_id := c.GetHeader("x-client-id")
+    if client_id == "" {
+      client_id = "unknown"
+    }
+    return map[string]string{"client_id": client_id}
+  }),
 )
 r.Use(p.Instrument())
 ```
