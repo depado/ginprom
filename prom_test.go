@@ -368,7 +368,7 @@ func TestEmptyRouter(t *testing.T) {
 
 func TestCustomCounterMetrics(t *testing.T) {
 	r := gin.New()
-	p := New(Engine(r), CustomCounterLabels([]string{"client_id", "tenant_id"}, func(c *gin.Context) map[string]string {
+	p := New(Engine(r), Registry(prometheus.NewRegistry()), CustomCounterLabels([]string{"client_id", "tenant_id"}, func(c *gin.Context) map[string]string {
 		clientId := c.GetHeader("X-Client-ID")
 		if clientId == "" {
 			clientId = "unknown"
