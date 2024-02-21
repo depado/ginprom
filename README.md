@@ -21,8 +21,9 @@ Inspired by [github.com/zsais/go-gin-prometheus](https://github.com/zsais/go-gin
 - [Differences with go-gin-prometheus](#differences-with-go-gin-prometheus)
 - [Usage](#usage)
 - [Options](#options)
-	- [Custom Counters](#custom-counters)
+	- [Custom counters](#custom-counters)
 	- [Custom gauges](#custom-gauges)
+	- [Custom histograms](#custom-histograms)
 	- [Path](#path)
 	- [Namespace](#namespace)
 	- [Subsystem](#subsystem)
@@ -76,7 +77,7 @@ func main() {
 
 ## Options
 
-### Custom Counters
+### Custom counters
 
 Add custom counters to add own values to the metrics
 
@@ -112,6 +113,23 @@ Save `p` and use the following functions:
 - IncrementGaugeValue
 - DecrementGaugeValue
 - SetGaugeValue
+
+### Custom histograms
+
+Add custom histograms to add own values to the metrics
+
+```go
+r := gin.New()
+p := ginprom.New(
+  ginprom.Engine(r),
+)
+p.AddCustomHistogram("internal_request_latency", "Duration of internal HTTP requests", []string{"url", "method", "status"})
+r.Use(p.Instrument())
+```
+
+Save `p` and use the following functions:
+
+- AddCustomHistogramValue
 
 ### Path
 

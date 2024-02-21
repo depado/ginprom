@@ -51,6 +51,11 @@ type pmapCounter struct {
 	values map[string]prometheus.CounterVec
 }
 
+type pmapHistogram struct {
+	sync.RWMutex
+	values map[string]prometheus.HistogramVec
+}
+
 // Prometheus contains the metrics gathered by the instance and its path.
 type Prometheus struct {
 	reqCnt       *prometheus.CounterVec
@@ -61,6 +66,7 @@ type Prometheus struct {
 	customCounters              pmapCounter
 	customCounterLabelsProvider func(c *gin.Context) map[string]string
 	customCounterLabels         []string
+	customHistograms            pmapHistogram
 
 	MetricsPath     string
 	Namespace       string
@@ -201,6 +207,33 @@ func (p *Prometheus) AddCustomCounter(name, help string, labels []string) {
 	p.mustRegister(g)
 }
 
+// AddCustomHistogramValue adds value to custom counter.
+func (p *Prometheus) AddCustomHistogramValue(name string, labelValues []string, value float64) error {
+	p.customHistograms.RLock()
+	defer p.customHistograms.RUnlock()
+
+	if g, ok := p.customHistograms.values[name]; ok {
+		g.WithLabelValues(labelValues...).Observe(value)
+	} else {
+		return ErrCustomCounter
+	}
+	return nil
+}
+
+// AddCustomCounter adds a custom counter and registers it.
+func (p *Prometheus) AddCustomHistogram(name, help string, labels []string) {
+	p.customHistograms.Lock()
+	defer p.customHistograms.Unlock()
+	g := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: p.Namespace,
+		Subsystem: p.Subsystem,
+		Name:      name,
+		Help:      help,
+	}, labels)
+	p.customHistograms.values[name] = *g
+	p.mustRegister(g)
+}
+
 func (p *Prometheus) mustRegister(c ...prometheus.Collector) {
 	registerer, _ := p.getRegistererAndGatherer()
 	registerer.MustRegister(c...)
@@ -225,6 +258,7 @@ func New(options ...PrometheusOption) *Prometheus {
 	p.customGauges.values = make(map[string]prometheus.GaugeVec)
 	p.customCounters.values = make(map[string]prometheus.CounterVec)
 	p.customCounterLabels = make([]string, 0)
+	p.customHistograms.values = make(map[string]prometheus.HistogramVec)
 
 	p.Ignored.values = make(map[string]bool)
 	for _, option := range options {
