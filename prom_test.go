@@ -441,6 +441,12 @@ func TestCustomHistogram(t *testing.T) {
 		assert.NoError(t, err)
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+	r.GET("/error", func(c *gin.Context) {
+		// Metric not found
+		err := p.AddCustomHistogramValue("invalid", []string{}, 9.56)
+		assert.Error(t, err)
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	expectedLines := []string{
 		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="0.005"} 0`,
@@ -473,6 +479,9 @@ func TestCustomHistogram(t *testing.T) {
 		assert.Equal(t, http.StatusOK, r.Code)
 	})
 	g.GET("/pong").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+	g.GET("/error").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, http.StatusOK, r.Code)
 	})
 
