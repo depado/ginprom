@@ -432,11 +432,13 @@ func TestCustomHistogram(t *testing.T) {
 	defer unregister(p)
 
 	r.GET("/ping", func(c *gin.Context) {
-		p.AddCustomHistogramValue("request_latency", []string{"http://example.com/status", "GET"}, 0.45)
+		err := p.AddCustomHistogramValue("request_latency", []string{"http://example.com/status", "GET"}, 0.45)
+		assert.NoError(t, err)
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 	r.GET("/pong", func(c *gin.Context) {
-		p.AddCustomHistogramValue("request_latency", []string{"http://example.com/status", "GET"}, 9.56)
+		err := p.AddCustomHistogramValue("request_latency", []string{"http://example.com/status", "GET"}, 9.56)
+		assert.NoError(t, err)
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
