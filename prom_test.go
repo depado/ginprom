@@ -424,6 +424,66 @@ func TestCustomCounterMetrics(t *testing.T) {
 	unregister(p)
 }
 
+func TestCustomHistogram(t *testing.T) {
+	r := gin.New()
+	p := New(Engine(r), Registry(prometheus.NewRegistry()))
+	p.AddCustomHistogram("request_latency", "test histogram", []string{"url", "method"})
+	r.Use(p.Instrument())
+	defer unregister(p)
+
+	r.GET("/ping", func(c *gin.Context) {
+		p.AddCustomHistogramValue("request_latency", []string{"http://example.com/status", "GET"}, 0.45)
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+	r.GET("/pong", func(c *gin.Context) {
+		p.AddCustomHistogramValue("request_latency", []string{"http://example.com/status", "GET"}, 9.56)
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	expectedLines := []string{
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="0.005"} 0`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="0.01"} 0`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="0.025"} 0`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="0.05"} 0`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="0.1"} 0`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="0.25"} 0`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="0.5"} 1`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="1"} 1`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="2.5"} 1`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="5"} 1`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="10"} 2`,
+		`gin_gonic_request_latency_bucket{method="GET",url="http://example.com/status",le="+Inf"} 2`,
+		`gin_gonic_request_latency_sum{method="GET",url="http://example.com/status"} 10.01`,
+		`gin_gonic_request_latency_count{method="GET",url="http://example.com/status"} 2`,
+	}
+
+	g := gofight.New()
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.NotContains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "request_latency"))
+
+		for _, line := range expectedLines {
+			assert.NotContains(t, r.Body.String(), line)
+		}
+	})
+
+	g.GET("/ping").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+	g.GET("/pong").Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.Contains(t, r.Body.String(), prometheus.BuildFQName(p.Namespace, p.Subsystem, "request_latency"))
+
+		for _, line := range expectedLines {
+			assert.Contains(t, r.Body.String(), line)
+		}
+	})
+}
+
 func TestIgnore(t *testing.T) {
 	r := gin.New()
 	ipath := "/ping"
