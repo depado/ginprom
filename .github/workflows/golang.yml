@@ -14,9 +14,10 @@ jobs:
         with:
           go-version: stable
       - name: test
-        run: go test -race -cover -covermode=atomic
+        run: go test -race
 
   coverage:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
