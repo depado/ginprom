@@ -1,13 +1,12 @@
 name: golang
 
 on:
-  push:
-    branches: ["main"]
   pull_request:
+  push:
     branches: ["main"]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,3 +15,16 @@ jobs:
           go-version: stable
       - name: test
         run: go test -race -cover -covermode=atomic
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - uses: gwatts/go-coverage-action@v2
+        id: coverage
+        with:
+          coverage-threshold: 80
+          cover-pkg: ./...
