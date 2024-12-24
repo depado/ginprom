@@ -19,6 +19,7 @@ jobs:
 
   coverage:
     name: Test and cover
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       issues: write
