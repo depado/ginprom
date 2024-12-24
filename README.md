@@ -5,7 +5,6 @@ Gin Prometheus metrics exporter
 
 [![Sourcegraph](https://sourcegraph.com/github.com/Depado/ginprom/-/badge.svg)](https://sourcegraph.com/github.com/Depado/ginprom?badge)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Depado/ginprom)](https://goreportcard.com/report/github.com/Depado/ginprom)
-[![Build Status](https://drone.depa.do/api/badges/Depado/ginprom/status.svg)](https://drone.depa.do/Depado/ginprom)
 [![codecov](https://codecov.io/gh/Depado/ginprom/branch/master/graph/badge.svg)](https://codecov.io/gh/Depado/ginprom)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Depado/bfchroma/blob/master/LICENSE)
 [![godoc](https://godoc.org/github.com/Depado/ginprom?status.svg)](https://godoc.org/github.com/Depado/ginprom)
