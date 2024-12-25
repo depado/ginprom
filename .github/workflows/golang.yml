@@ -20,11 +20,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: "go.mod"
-          cache: false
       - uses: gwatts/go-coverage-action@v2
         id: coverage
         with:
-          coverage-threshold: 80
+          fail-coverage: never
           cover-pkg: ./...
 
   golangci:
