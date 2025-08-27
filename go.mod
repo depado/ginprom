@@ -8,7 +8,7 @@ require (
 	github.com/appleboy/gofight/v2 v2.2.0
 	github.com/gin-gonic/gin v1.10.1
 	github.com/prometheus/client_golang v1.23.0
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
