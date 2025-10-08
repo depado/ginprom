@@ -1,6 +1,8 @@
 package ginprom
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -156,5 +158,29 @@ func CustomCounterLabels(labels []string, f func(c *gin.Context) map[string]stri
 	return func(p *Prometheus) {
 		p.customCounterLabelsProvider = f
 		p.customCounterLabels = labels
+	}
+}
+
+func NativeHistogram(nh bool) PrometheusOption {
+	return func(p *Prometheus) {
+		p.nativeHistogram = nh
+	}
+}
+
+func NativeHistogramBucketFactor(nhbf float64) PrometheusOption {
+	return func(p *Prometheus) {
+		p.NativeHistogramBucketFactor = nhbf
+	}
+}
+
+func NativeHistogramMaxBucketNumber(nhmbn uint32) PrometheusOption {
+	return func(p *Prometheus) {
+		p.NativeHistogramMaxBucketNumber = nhmbn
+	}
+}
+
+func NativeHistogramMinResetDuration(nhmrd time.Duration) PrometheusOption {
+	return func(p *Prometheus) {
+		p.NativeHistogramMinResetDuration = nhmrd
 	}
 }

@@ -67,6 +67,7 @@ type Prometheus struct {
 	customCounterLabelsProvider func(c *gin.Context) map[string]string
 	customCounterLabels         []string
 	customHistograms            pmapHistogram
+	nativeHistogram             bool
 
 	MetricsPath     string
 	Namespace       string
@@ -79,6 +80,10 @@ type Prometheus struct {
 	HandlerNameFunc func(c *gin.Context) string
 	RequestPathFunc func(c *gin.Context) string
 	HandlerOpts     promhttp.HandlerOpts
+
+	NativeHistogramBucketFactor     float64
+	NativeHistogramMaxBucketNumber  uint32
+	NativeHistogramMinResetDuration time.Duration
 
 	RequestCounterMetricName  string
 	RequestDurationMetricName string
@@ -224,12 +229,29 @@ func (p *Prometheus) AddCustomHistogramValue(name string, labelValues []string, 
 func (p *Prometheus) AddCustomHistogram(name, help string, labels []string) {
 	p.customHistograms.Lock()
 	defer p.customHistograms.Unlock()
-	g := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: p.Namespace,
-		Subsystem: p.Subsystem,
-		Name:      name,
-		Help:      help,
-	}, labels)
+
+	var reqDurOpts prometheus.HistogramOpts
+	if p.nativeHistogram {
+		reqDurOpts = prometheus.HistogramOpts{
+			Namespace:                       p.Namespace,
+			Subsystem:                       p.Subsystem,
+			NativeHistogramBucketFactor:     p.NativeHistogramBucketFactor,
+			NativeHistogramMaxBucketNumber:  p.NativeHistogramMaxBucketNumber,
+			NativeHistogramMinResetDuration: p.NativeHistogramMinResetDuration,
+			Name:                            name,
+			Help:                            help,
+		}
+
+	} else {
+		reqDurOpts = prometheus.HistogramOpts{
+			Namespace: p.Namespace,
+			Subsystem: p.Subsystem,
+			Name:      name,
+			Help:      help,
+		}
+	}
+
+	g := prometheus.NewHistogramVec(reqDurOpts, labels)
 	p.customHistograms.values[name] = *g
 	p.mustRegister(g)
 }
@@ -254,6 +276,11 @@ func New(options ...PrometheusOption) *Prometheus {
 		RequestDurationMetricName: defaultReqDurMetricName,
 		RequestSizeMetricName:     defaultReqSzMetricName,
 		ResponseSizeMetricName:    defaultResSzMetricName,
+		nativeHistogram:           false,
+		// Grafana Mimir recommended parameters: https://grafana.com/docs/mimir/latest/send/native-histograms/
+		NativeHistogramBucketFactor:     1.1,
+		NativeHistogramMaxBucketNumber:  100,
+		NativeHistogramMinResetDuration: 1 * time.Hour,
 	}
 	p.customGauges.values = make(map[string]prometheus.GaugeVec)
 	p.customCounters.values = make(map[string]prometheus.CounterVec)
@@ -292,13 +319,29 @@ func (p *Prometheus) register() {
 	)
 	p.mustRegister(p.reqCnt)
 
-	p.reqDur = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: p.Namespace,
-		Subsystem: p.Subsystem,
-		Buckets:   p.BucketsSize,
-		Name:      p.RequestDurationMetricName,
-		Help:      "The HTTP request latency bucket.",
-	}, []string{"method", "path", "host"})
+	var reqDurOpts prometheus.HistogramOpts
+	if p.nativeHistogram {
+		reqDurOpts = prometheus.HistogramOpts{
+			Namespace:                       p.Namespace,
+			Subsystem:                       p.Subsystem,
+			NativeHistogramBucketFactor:     p.NativeHistogramBucketFactor,
+			NativeHistogramMaxBucketNumber:  p.NativeHistogramMaxBucketNumber,
+			NativeHistogramMinResetDuration: p.NativeHistogramMinResetDuration,
+			Name:                            p.RequestDurationMetricName,
+			Help:                            "The HTTP request latency bucket.",
+		}
+
+	} else {
+		reqDurOpts = prometheus.HistogramOpts{
+			Namespace: p.Namespace,
+			Subsystem: p.Subsystem,
+			Buckets:   p.BucketsSize,
+			Name:      p.RequestDurationMetricName,
+			Help:      "The HTTP request latency bucket.",
+		}
+	}
+
+	p.reqDur = prometheus.NewHistogramVec(reqDurOpts, []string{"method", "path", "host"})
 	p.mustRegister(p.reqDur)
 
 	p.reqSz = prometheus.NewSummary(

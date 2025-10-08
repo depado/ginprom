@@ -34,6 +34,7 @@ Inspired by [github.com/zsais/go-gin-prometheus](https://github.com/zsais/go-gin
 	- [Ignore](#ignore)
 	- [Token](#token)
 	- [Bucket size](#bucket-size)
+	- [Native histogram](#native-histogram)
 - [Troubleshooting](#troubleshooting)
 	- [The instrumentation doesn't seem to work](#the-instrumentation-doesnt-seem-to-work)
 
@@ -320,6 +321,28 @@ r := gin.New()
 p := ginprom.New(
 	ginprom.Engine(r),
 	ginprom.BucketSize([]float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}),
+)
+r.Use(p.Instrument())
+```
+
+### Native histogram
+
+Configure ginprom to use native histogram instead of classical histograms.
+Refers to: https://prometheus.io/docs/specs/native_histograms/
+
+Default values:
+  - BucketFactor : 1.1
+  - MaxBucketNumber: 100
+  - MinResetDuration : 1 Hour
+
+```go
+r := gin.New()
+p := ginprom.New(
+	ginprom.Engine(r),
+	ginprom.NativeHistogram(true),
+	ginprom.NativeHistogramBucketFactor(1.1),
+	ginprom.NativeHistogramMaxBucketNumber(100),
+	ginprom.NativeHistogramMinResetDuration(1 * time.Hour),
 )
 r.Use(p.Instrument())
 ```

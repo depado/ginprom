@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -493,6 +494,38 @@ func TestCustomHistogram(t *testing.T) {
 			assert.Contains(t, r.Body.String(), line)
 		}
 	})
+}
+
+func TestCustomNativeHistogram(t *testing.T) {
+	r := gin.New()
+	registry := prometheus.NewRegistry()
+	p := New(Engine(r), Registry(registry), NativeHistogram(true))
+	p.AddCustomHistogram("custom_histogram", "test histogram", []string{"url", "method"})
+	r.Use(p.Instrument())
+	defer unregister(p)
+
+	err := p.AddCustomHistogramValue("custom_histogram", []string{"http://example.com/status", "GET"}, 0.45)
+	assert.Nil(t, err)
+
+	mfs, err := registry.Gather()
+	assert.Nil(t, err)
+
+	found := false
+
+	for _, mf := range mfs {
+		if mf.GetType() == io_prometheus_client.MetricType_HISTOGRAM {
+			for _, m := range mf.Metric {
+				if mf.GetName() == "gin_gonic_custom_histogram" {
+					found = true
+					assert.Equal(t, int32(3), m.GetHistogram().GetSchema())
+					assert.Equal(t, uint64(0x1), m.GetHistogram().GetSampleCount())
+					assert.Equal(t, 0.45, m.GetHistogram().GetSampleSum())
+				}
+			}
+		}
+	}
+
+	assert.True(t, found)
 }
 
 func TestIgnore(t *testing.T) {
