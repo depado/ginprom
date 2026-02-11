@@ -124,6 +124,19 @@ func HandlerNameFunc(f func(c *gin.Context) string) PrometheusOption {
 	}
 }
 
+// HostFunc is an option allowing to set the HostFunc with New.
+// Use this option if you want to override the default behavior (i.e. using
+// c.Request.Host). This is useful to reduce metric cardinality when the Host
+// header varies (e.g. dynamic subdomains) but requests are handled the same.
+// Example:
+// r := gin.Default()
+// p := ginprom.New(HostFunc(func(c *gin.Context) string { return "my-service" }))
+func HostFunc(f func(c *gin.Context) string) PrometheusOption {
+	return func(p *Prometheus) {
+		p.HostFunc = f
+	}
+}
+
 // HandlerOpts is an option allowing to set the promhttp.HandlerOpts.
 // Use this option if you want to override the default zero value.
 func HandlerOpts(opts promhttp.HandlerOpts) PrometheusOption {
