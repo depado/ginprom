@@ -124,6 +124,38 @@ func TestHandlerNameFunc(t *testing.T) {
 	})
 }
 
+func TestHostFunc(t *testing.T) {
+	r := gin.New()
+	registry := prometheus.NewRegistry()
+	host := "normalized.example.com"
+	lhost := fmt.Sprintf("host=%q", host)
+
+	p := New(
+		HostFunc(func(c *gin.Context) string {
+			return host
+		}),
+		Registry(registry),
+		Engine(r),
+	)
+
+	r.Use(p.Instrument())
+
+	r.GET("/", func(context *gin.Context) {
+		context.Status(http.StatusOK)
+	})
+
+	g := gofight.New()
+
+	g.GET("/").Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, response.Code, http.StatusOK)
+	})
+
+	g.GET(p.MetricsPath).Run(r, func(response gofight.HTTPResponse, request gofight.HTTPRequest) {
+		assert.Equal(t, response.Code, http.StatusOK)
+		assert.Contains(t, response.Body.String(), lhost)
+	})
+}
+
 func TestHandlerOpts(t *testing.T) {
 	r := gin.New()
 	registry := prometheus.NewRegistry()

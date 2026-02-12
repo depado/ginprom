@@ -21,6 +21,7 @@ var defaultNs = "gin"
 var defaultSys = "gonic"
 var defaultHandlerNameFunc = (*gin.Context).HandlerName
 var defaultRequestPathFunc = (*gin.Context).FullPath
+var defaultHostFunc = func(c *gin.Context) string { return c.Request.Host }
 
 var defaultReqCntMetricName = "requests_total"
 var defaultReqDurMetricName = "request_duration"
@@ -79,6 +80,7 @@ type Prometheus struct {
 	Registry        *prometheus.Registry
 	HandlerNameFunc func(c *gin.Context) string
 	RequestPathFunc func(c *gin.Context) string
+	HostFunc        func(c *gin.Context) string
 	HandlerOpts     promhttp.HandlerOpts
 
 	NativeHistogramBucketFactor     float64
@@ -272,6 +274,7 @@ func New(options ...PrometheusOption) *Prometheus {
 		Subsystem:                 defaultSys,
 		HandlerNameFunc:           defaultHandlerNameFunc,
 		RequestPathFunc:           defaultRequestPathFunc,
+		HostFunc:                  defaultHostFunc,
 		RequestCounterMetricName:  defaultReqCntMetricName,
 		RequestDurationMetricName: defaultReqDurMetricName,
 		RequestSizeMetricName:     defaultReqSzMetricName,
@@ -392,7 +395,8 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 		elapsed := float64(time.Since(start)) / float64(time.Second)
 		resSz := float64(c.Writer.Size())
 
-		labels := []string{status, c.Request.Method, p.HandlerNameFunc(c), c.Request.Host, path}
+		host := p.HostFunc(c)
+		labels := []string{status, c.Request.Method, p.HandlerNameFunc(c), host, path}
 		if p.customCounterLabelsProvider != nil {
 			extraLabels := p.customCounterLabelsProvider(c)
 			for _, label := range p.customCounterLabels {
@@ -401,7 +405,7 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 		}
 
 		p.reqCnt.WithLabelValues(labels...).Inc()
-		p.reqDur.WithLabelValues(c.Request.Method, path, c.Request.Host).Observe(elapsed)
+		p.reqDur.WithLabelValues(c.Request.Method, path, host).Observe(elapsed)
 		p.reqSz.Observe(float64(reqSz))
 		p.resSz.Observe(resSz)
 	}
