@@ -2,7 +2,7 @@ module github.com/Depado/ginprom
 
 go 1.25.10
 
-toolchain go1.26.3
+toolchain go1.26.4
 
 require (
 	github.com/appleboy/gofight/v2 v2.2.2
