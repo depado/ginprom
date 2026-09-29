@@ -1,5 +1,7 @@
 github.com/appleboy/gofight/v2 v2.2.2 h1:rQcLkVa3bq81UeWNrqqw1Cg34Z1DtsSIhtkFu81cK5I=
 github.com/appleboy/gofight/v2 v2.2.2/go.mod h1:vNptRBbR0fFvnryIrof1kyANz5fprVJxTTEmMV4S1AY=
+github.com/appleboy/gofight/v2 v2.2.3 h1:USCUDy1ehchfcSW+vbgUHWvytOuBSBLX9W62SdEk4tA=
+github.com/appleboy/gofight/v2 v2.2.3/go.mod h1:NivLssRAFzgpXS0SZt0E5lZ8nsAbipVvKjmO63mrlCg=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bytedance/gopkg v0.1.4 h1:oZnQwnX82KAIWb7033bEwtxvTqXcYMxDBaQxo5JJHWM=
