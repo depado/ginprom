@@ -1,11 +1,11 @@
 module github.com/Depado/ginprom
 
-go 1.25.10
+go 1.26.8
 
 toolchain go1.27.1
 
 require (
-	github.com/appleboy/gofight/v2 v2.2.2
+	github.com/appleboy/gofight/v2 v2.2.3
 	github.com/gin-gonic/gin v1.12.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.3
